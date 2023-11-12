@@ -363,4 +363,9 @@ class BluetoothViewModel @Inject constructor(
             }
         }
     }
+
+    fun stopPolling() {
+        _state.value.pollingInterval?.cancel()
+        _state.update { it.copy(pollingInterval = null) }
+    }
 }
