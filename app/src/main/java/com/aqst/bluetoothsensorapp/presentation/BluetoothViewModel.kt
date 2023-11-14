@@ -265,10 +265,16 @@ class BluetoothViewModel @Inject constructor(
         )
 
         _state.update {
+            val data = if (it.data.size >= 300) {
+                it.data.drop(1) + entry
+            } else {
+                it.data + entry
+            }
+
             it.copy(
                 lastCommand = null,
                 messages = it.messages + parsedMessage,
-                data = it.data + entry
+                data = data
             )
         }
     }
