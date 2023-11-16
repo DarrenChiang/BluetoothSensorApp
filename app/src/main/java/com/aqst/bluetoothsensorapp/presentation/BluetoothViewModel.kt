@@ -121,6 +121,7 @@ class BluetoothViewModel @Inject constructor(
         deviceConnectionJob?.cancel()
         bluetoothController.closeConnection()
         _state.value.drawInterval?.cancel()
+        _state.value.pollingInterval?.cancel()
 
         _state.update {
             it.copy(
@@ -170,21 +171,31 @@ class BluetoothViewModel @Inject constructor(
                     handleResponse(result.message)
                 }
                 is ConnectionResult.Error -> {
+                    _state.value.drawInterval?.cancel()
+                    _state.value.pollingInterval?.cancel()
+
                     _state.update {
                         it.copy(
                             isConnected = false,
                             isConnecting = false,
-                            errorMessage = result.message
+                            errorMessage = result.message,
+                            drawInterval = null,
+                            pollingInterval = null
                         )
                     }
                 }
             }
         }.catch {
             bluetoothController.closeConnection()
+            _state.value.drawInterval?.cancel()
+            _state.value.pollingInterval?.cancel()
+
             _state.update {
                 it.copy(
                     isConnected = false,
-                    isConnecting = false
+                    isConnecting = false,
+                    drawInterval = null,
+                    pollingInterval = null
                 )
             }
         }.launchIn(viewModelScope)
