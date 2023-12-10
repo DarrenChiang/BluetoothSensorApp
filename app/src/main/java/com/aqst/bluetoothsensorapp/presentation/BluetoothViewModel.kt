@@ -8,6 +8,7 @@ import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothController
 import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothDeviceDomain
 import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothMessage
 import com.aqst.bluetoothsensorapp.domain.sensor.ConnectionResult
+import com.aqst.bluetoothsensorapp.domain.sensor.DataPoint
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
@@ -49,8 +50,7 @@ class BluetoothViewModel @Inject constructor(
     ) { scannedDevices, pairedDevices, state ->
         state.copy(
             scannedDevices = scannedDevices,
-            pairedDevices = pairedDevices,
-            messages = if (state.isConnected) state.messages else emptyList()
+            pairedDevices = pairedDevices
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _state.value)
 
@@ -135,15 +135,7 @@ class BluetoothViewModel @Inject constructor(
 
     fun sendMessage(message: String) {
         viewModelScope.launch {
-            val bluetoothMessage = bluetoothController.trySendMessage(message)
-
-            if (bluetoothMessage != null) {
-                _state.update {
-                    it.copy(
-                        messages = it.messages + bluetoothMessage
-                    )
-                }
-            }
+            bluetoothController.trySendMessage(message)
         }
     }
 
@@ -242,7 +234,7 @@ class BluetoothViewModel @Inject constructor(
 
     private fun updateChart() {
         val chart = _state.value.chart
-        val data = _state.value.data
+        val data = _state.value.chartData
 
         // Create a LineDataSet from the entries
         val dataSet = LineDataSet(data, "Data Set")
@@ -267,25 +259,39 @@ class BluetoothViewModel @Inject constructor(
         val range: String = data[7]
         val alarmConditions: String = data[9]
 
-        val entry = Entry(_state.value.data.size.toFloat(), readingPPM.toFloat())
-
-        val parsedMessage = BluetoothMessage(
-            message = "PPM: $readingPPM, MV: $readingMV, time: $time, date: $date, range: $range, alarm: $alarmConditions",
-            senderName = "TEST",
-            isFromLocalUser = false
-        )
-
         _state.update {
-            val data = if (it.data.size >= 300) {
-                it.data.drop(1) + entry
+            val incomingData = DataPoint(readingPPM, readingMV, time, date, range, alarmConditions)
+
+            val pollingData = if (it.pollingData.size >= 300) {
+                it.pollingData.drop(1) + incomingData
             } else {
-                it.data + entry
+                it.pollingData + incomingData
+            }
+
+            val xValue: Float = if (it.chartData.isNotEmpty()) {
+                it.chartData.last().x + 1
+            } else {
+                1.toFloat()
+            }
+
+            var yValue: Float = readingPPM.toFloat()
+
+            if (it.zeroValue !== null && it.zeroValue >= yValue) {
+                yValue = 0.toFloat()
+            }
+
+            val entry = Entry(xValue, yValue)
+
+            val chartData = if (it.chartData.size >= 300) {
+                it.chartData.drop(1) + entry
+            } else {
+                it.chartData + entry
             }
 
             it.copy(
                 lastCommand = null,
-                messages = it.messages + parsedMessage,
-                data = data
+                pollingData = pollingData,
+                chartData = chartData
             )
         }
     }
@@ -306,14 +312,13 @@ class BluetoothViewModel @Inject constructor(
 
         val parsedMessage = BluetoothMessage(
             message = "b1: $byte1, b2: $byte2, b3: $byte3, b4: $byte4, b5: $byte5, b6: $byte6",
-            senderName = "TEST",
+            senderName = "Device",
             isFromLocalUser = false
         )
 
         _state.update {
             it.copy(
-                lastCommand = null,
-                messages = it.messages + parsedMessage
+                lastCommand = null
             )
         }
     }
@@ -340,20 +345,6 @@ class BluetoothViewModel @Inject constructor(
         if (message[0] == 'g') {
             handleG(message.substring(1))
             return
-        }
-
-        _state.update {
-            it.copy(
-                messages = it.messages + btMessage
-            )
-        }
-    }
-
-    fun toggleChart() {
-        _state.update {
-            it.copy(
-                showChart = !it.showChart
-            )
         }
     }
 
@@ -384,5 +375,23 @@ class BluetoothViewModel @Inject constructor(
     fun stopPolling() {
         _state.value.pollingInterval?.cancel()
         _state.update { it.copy(pollingInterval = null) }
+    }
+
+    fun activateZero() {
+        if (_state.value.zeroValue == null) {
+            _state.update {
+                it.copy(
+                    zeroValue = it.pollingData.last().ppm.toFloat()
+                )
+            }
+        }
+    }
+
+    fun deactivateZero() {
+        _state.update {
+            it.copy(
+                zeroValue = null
+            )
+        }
     }
 }

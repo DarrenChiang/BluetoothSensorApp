@@ -6,5 +6,8 @@ import java.util.Date
 data class DataPoint(
     val ppm: BigDecimal,
     val mv: BigDecimal,
-    val timestamp: Date
+    val time: String,
+    val date: String,
+    val range: String,
+    val alarmConditions: String
 )

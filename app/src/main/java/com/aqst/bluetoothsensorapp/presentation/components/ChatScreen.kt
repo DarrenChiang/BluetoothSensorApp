@@ -35,15 +35,13 @@ import com.aqst.bluetoothsensorapp.presentation.BluetoothUiState
 fun ChatScreen(
     state: BluetoothUiState,
     onDisconnect: () -> Unit,
-    onSendMessage: (String) -> Unit,
     onStartPolling: () -> Unit,
-    onToggleChart: () -> Unit
+    onStopPolling: () -> Unit,
+    onActivateZeroClick: () -> Unit,
+    onDeactivateZeroClick: () -> Unit
 ) {
-    val message = rememberSaveable {
-        mutableStateOf("")
-    }
-
-    val keyboardController = LocalSoftwareKeyboardController.current
+    val isPolling = state.pollingInterval !== null
+    val zeroActivated = state.zeroValue !== null
 
     Column(
         modifier = Modifier
@@ -66,76 +64,43 @@ fun ChatScreen(
                 )
             }
         }
-        when {
-            state.showChart -> {
-                Chart(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    chart = state.chart
-                )
-            }
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(state.messages) { message ->
-                        Column(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            ChatMessage(
-                                message = message,
-                                modifier = Modifier
-                                    .align(
-                                        if (message.isFromLocalUser) Alignment.End else Alignment.Start
-                                    )
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        Chart(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            chart = state.chart
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextField(
-                value = message.value,
-                onValueChange = { message.value = it },
-                modifier = Modifier.weight(1f),
-                placeholder = {
-                    Text(text = "Message")
-                }
-            )
-            IconButton(onClick = {
-                onSendMessage(message.value)
-                message.value = ""
-                keyboardController?.hide()
-            }) {
-                Icon(
-                    imageVector = Icons.Default.Send,
-                    contentDescription = "Send message"
-                )
-            }
-            Button(onClick = onStartPolling) {
-                Text(text = "Start Polling")
-            }
-            Button(onClick = onToggleChart) {
-                when {
-                    state.showChart -> {
-                        Text(text = "Hide Chart")
+            when {
+                isPolling -> {
+                    Button(onClick = onStopPolling) {
+                        Text(text = "Stop Polling")
                     }
-                    else -> {
-                        Text(text = "Show Chart")
+                }
+                else -> {
+                    Button(onClick = onStartPolling) {
+                        Text(text = "Start Polling")
                     }
                 }
             }
+            when {
+                zeroActivated -> {
+                    Button(onClick = onDeactivateZeroClick) {
+                        Text(text = "Stop Zero")
+                    }
+                }
+                else -> {
+                    Button(onClick = onActivateZeroClick) {
+                        Text(text = "Zero")
+                    }
+                }
+            }
+
         }
     }
 }

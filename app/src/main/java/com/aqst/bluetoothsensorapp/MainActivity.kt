@@ -115,9 +115,10 @@ class MainActivity: ComponentActivity() {
                             ChatScreen(
                                 state = state,
                                 onDisconnect = viewModel::disconnectFromDevice,
-                                onSendMessage = viewModel::sendMessage,
                                 onStartPolling = viewModel::startPolling,
-                                onToggleChart = viewModel::toggleChart
+                                onStopPolling = viewModel::stopPolling,
+                                onActivateZeroClick = viewModel::activateZero,
+                                onDeactivateZeroClick = viewModel::deactivateZero
                             )
                         }
                         else -> {
