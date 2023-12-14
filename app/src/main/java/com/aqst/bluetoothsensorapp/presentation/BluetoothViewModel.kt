@@ -141,10 +141,12 @@ class BluetoothViewModel @Inject constructor(
 
     fun startScan() {
         bluetoothController.startDiscovery()
+        _state.update { it.copy(isScanning = true) }
     }
 
     fun stopScan() {
         bluetoothController.stopDiscovery()
+        _state.update { it.copy(isScanning = false) }
     }
 
     private fun Flow<ConnectionResult>.listen(): Job {
@@ -178,6 +180,7 @@ class BluetoothViewModel @Inject constructor(
                 }
             }
         }.catch {
+            val errorMessage = it.message
             bluetoothController.closeConnection()
             _state.value.drawInterval?.cancel()
             _state.value.pollingInterval?.cancel()
@@ -187,7 +190,8 @@ class BluetoothViewModel @Inject constructor(
                     isConnected = false,
                     isConnecting = false,
                     drawInterval = null,
-                    pollingInterval = null
+                    pollingInterval = null,
+                    errorMessage = errorMessage
                 )
             }
         }.launchIn(viewModelScope)
@@ -262,7 +266,7 @@ class BluetoothViewModel @Inject constructor(
         _state.update {
             val incomingData = DataPoint(readingPPM, readingMV, time, date, range, alarmConditions)
 
-            val pollingData = if (it.pollingData.size >= 300) {
+            val pollingData = if (it.pollingData.size >= 120) {
                 it.pollingData.drop(1) + incomingData
             } else {
                 it.pollingData + incomingData
@@ -282,7 +286,7 @@ class BluetoothViewModel @Inject constructor(
 
             val entry = Entry(xValue, yValue)
 
-            val chartData = if (it.chartData.size >= 300) {
+            val chartData = if (it.chartData.size >= 120) {
                 it.chartData.drop(1) + entry
             } else {
                 it.chartData + entry
@@ -352,7 +356,7 @@ class BluetoothViewModel @Inject constructor(
         val pollingInterval = _state.value.pollingInterval
 
         if (pollingInterval == null) {
-            val delay = 100.toLong()
+            val delay = 1000.toLong()
             val timer = Timer()
 
             val timerTask = object : TimerTask() {
