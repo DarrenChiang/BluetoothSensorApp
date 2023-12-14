@@ -53,6 +53,7 @@ fun DeviceScreen(
                     }
                 }
             }
+            Text(text = if (state.errorMessage.isNullOrBlank()) "" else state.errorMessage)
         }
     }
 }
