@@ -100,7 +100,6 @@ fun ChatScreen(
                     }
                 }
             }
-
         }
     }
 }

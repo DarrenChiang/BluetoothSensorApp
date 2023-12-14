@@ -378,7 +378,7 @@ class BluetoothViewModel @Inject constructor(
     }
 
     fun activateZero() {
-        if (_state.value.zeroValue == null) {
+        if (_state.value.zeroValue == null && _state.value.pollingData.isNotEmpty()) {
             _state.update {
                 it.copy(
                     zeroValue = it.pollingData.last().ppm.toFloat()
