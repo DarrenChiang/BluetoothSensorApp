@@ -36,6 +36,8 @@ import java.util.Locale
 import java.util.Timer
 import java.util.TimerTask
 import javax.inject.Inject
+import kotlin.math.log10
+import kotlin.math.pow
 
 @HiltViewModel
 class BluetoothViewModel @Inject constructor(
@@ -43,6 +45,7 @@ class BluetoothViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ): ViewModel() {
     private val _state = MutableStateFlow(BluetoothUiState())
+
     val state = combine(
         bluetoothController.scannedDevices,
         bluetoothController.pairedDevices,
@@ -98,7 +101,7 @@ class BluetoothViewModel @Inject constructor(
 
         yAxis.valueFormatter = object : ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
-                return String.format("%.2e", value)
+                return String.format("%.2e", 10.0.pow(value.toDouble()))
             }
         }
 
@@ -256,6 +259,7 @@ class BluetoothViewModel @Inject constructor(
     private fun handleD(message: String) {
         if (message.length < 10) return
         val data: List<String> = message.substring(1).split(',')
+        if (data.size < 10) return
         val readingPPM = BigDecimal(data[0])
         val readingMV = BigDecimal(data[1])
         val time: String = data[4]
@@ -281,8 +285,10 @@ class BluetoothViewModel @Inject constructor(
             var yValue: Float = readingPPM.toFloat()
 
             if (it.zeroValue !== null && it.zeroValue >= yValue) {
-                yValue = 0.toFloat()
+                yValue = it.zeroValue
             }
+
+            yValue = log10(yValue)
 
             val entry = Entry(xValue, yValue)
 
@@ -307,6 +313,7 @@ class BluetoothViewModel @Inject constructor(
     private fun handleG(message: String) {
         if (message.length < 6) return
         val data: List<String> = message.substring(1).split(',')
+        if (data.size < 6) return
         val byte1: Int = hexStrToInt(data[0])
         val byte2: Int = hexStrToInt(data[1])
         val byte3: Int = hexStrToInt(data[2])
