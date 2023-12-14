@@ -101,6 +101,7 @@ class BluetoothViewModel @Inject constructor(
 
         yAxis.valueFormatter = object : ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
+                if (value.compareTo(0) == 0) return "0"
                 return String.format("%.2e", 10.0.pow(value.toDouble()))
             }
         }
@@ -285,10 +286,12 @@ class BluetoothViewModel @Inject constructor(
             var yValue: Float = readingPPM.toFloat()
 
             if (it.zeroValue !== null && it.zeroValue >= yValue) {
-                yValue = it.zeroValue
+                yValue = 0.toFloat()
             }
 
-            yValue = log10(yValue)
+            if (yValue > 0) {
+                yValue = log10(yValue)
+            }
 
             val entry = Entry(xValue, yValue)
 
