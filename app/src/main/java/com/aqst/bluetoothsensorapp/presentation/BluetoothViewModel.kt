@@ -114,7 +114,14 @@ class BluetoothViewModel @Inject constructor(
     }
 
     fun connectToDevice(device: BluetoothDeviceDomain) {
-        _state.update { it.copy(isConnecting = true) }
+        _state.update {
+            if (it.isScanning) bluetoothController.stopDiscovery()
+
+            it.copy(
+                isConnecting = true,
+                isScanning = false
+            )
+        }
 
         deviceConnectionJob = bluetoothController
             .connectToDevice(device)
@@ -366,7 +373,7 @@ class BluetoothViewModel @Inject constructor(
         val pollingInterval = _state.value.pollingInterval
 
         if (pollingInterval == null) {
-            val delay = 1000.toLong()
+            val delay = 100.toLong()
             val timer = Timer()
 
             val timerTask = object : TimerTask() {
