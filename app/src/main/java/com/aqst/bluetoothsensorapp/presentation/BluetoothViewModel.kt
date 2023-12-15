@@ -266,18 +266,17 @@ class BluetoothViewModel @Inject constructor(
 
     private fun handleD(message: String) {
         try {
-            if (message.length < 10) return
-            var content = if (message[0] == 'd') message.substring(1) else message
-//            Special handling in of case double "d"
-            content = if (content[0] == 'd') content.substring(1) else content
+            val startIndex = message.indexOfFirst { it != 'd' }
+            val content = message.substring(startIndex)
             val data: List<String> = content.split(',')
-            if (data.size < 10) return
+            if (data.size < 6) return
             val readingPPM = BigDecimal(data[0])
             val readingMV = BigDecimal(data[1])
             val time: String = data[4]
             val date: String = data[5]
-            val range: String = data[7]
-            val alarmConditions: String = data[9]
+            val defaultFunc = { _: Int -> "" }
+            val range: String = data.getOrElse(6, defaultFunc)
+            val alarmConditions: String = data.getOrElse(8, defaultFunc)
 
             _state.update {
                 val incomingData = DataPoint(readingPPM, readingMV, time, date, range, alarmConditions)
@@ -319,9 +318,8 @@ class BluetoothViewModel @Inject constructor(
                 )
             }
         } catch (error: Throwable) {
-            throw Exception("Error: " + error.message + "\nMessage: " + message)
+            return
         }
-
     }
 
     private fun hexStrToInt(hexStr: String): Int {
