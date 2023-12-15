@@ -267,7 +267,9 @@ class BluetoothViewModel @Inject constructor(
     private fun handleD(message: String) {
         try {
             if (message.length < 10) return
-            val content = if (message[0] == 'd') message.substring(1) else message
+            var content = if (message[0] == 'd') message.substring(1) else message
+//            Special handling in of case double "d"
+            content = if (content[0] == 'd') content.substring(1) else content
             val data: List<String> = content.split(',')
             if (data.size < 10) return
             val readingPPM = BigDecimal(data[0])
