@@ -265,55 +265,61 @@ class BluetoothViewModel @Inject constructor(
     }
 
     private fun handleD(message: String) {
-        if (message.length < 10) return
-        val data: List<String> = message.substring(1).split(',')
-        if (data.size < 10) return
-        val readingPPM = BigDecimal(data[0])
-        val readingMV = BigDecimal(data[1])
-        val time: String = data[4]
-        val date: String = data[5]
-        val range: String = data[7]
-        val alarmConditions: String = data[9]
+        try {
+            if (message.length < 10) return
+            val content = if (message[0] == 'd') message.substring(1) else message
+            val data: List<String> = content.split(',')
+            if (data.size < 10) return
+            val readingPPM = BigDecimal(data[0])
+            val readingMV = BigDecimal(data[1])
+            val time: String = data[4]
+            val date: String = data[5]
+            val range: String = data[7]
+            val alarmConditions: String = data[9]
 
-        _state.update {
-            val incomingData = DataPoint(readingPPM, readingMV, time, date, range, alarmConditions)
+            _state.update {
+                val incomingData = DataPoint(readingPPM, readingMV, time, date, range, alarmConditions)
 
-            val pollingData = if (it.pollingData.size >= 120) {
-                it.pollingData.drop(1) + incomingData
-            } else {
-                it.pollingData + incomingData
+                val pollingData = if (it.pollingData.size >= 120) {
+                    it.pollingData.drop(1) + incomingData
+                } else {
+                    it.pollingData + incomingData
+                }
+
+                val xValue: Float = if (it.chartData.isNotEmpty()) {
+                    it.chartData.last().x + 1
+                } else {
+                    1.toFloat()
+                }
+
+                var yValue: Float = readingPPM.toFloat()
+
+                if (it.zeroValue !== null && it.zeroValue >= yValue) {
+                    yValue = 0.toFloat()
+                }
+
+                if (yValue > 0) {
+                    yValue = log10(yValue)
+                }
+
+                val entry = Entry(xValue, yValue)
+
+                val chartData = if (it.chartData.size >= 120) {
+                    it.chartData.drop(1) + entry
+                } else {
+                    it.chartData + entry
+                }
+
+                it.copy(
+                    lastCommand = null,
+                    pollingData = pollingData,
+                    chartData = chartData
+                )
             }
-
-            val xValue: Float = if (it.chartData.isNotEmpty()) {
-                it.chartData.last().x + 1
-            } else {
-                1.toFloat()
-            }
-
-            var yValue: Float = readingPPM.toFloat()
-
-            if (it.zeroValue !== null && it.zeroValue >= yValue) {
-                yValue = 0.toFloat()
-            }
-
-            if (yValue > 0) {
-                yValue = log10(yValue)
-            }
-
-            val entry = Entry(xValue, yValue)
-
-            val chartData = if (it.chartData.size >= 120) {
-                it.chartData.drop(1) + entry
-            } else {
-                it.chartData + entry
-            }
-
-            it.copy(
-                lastCommand = null,
-                pollingData = pollingData,
-                chartData = chartData
-            )
+        } catch (error: Throwable) {
+            throw Exception("Error: " + error.message + "\nMessage: " + message)
         }
+
     }
 
     private fun hexStrToInt(hexStr: String): Int {
@@ -322,7 +328,8 @@ class BluetoothViewModel @Inject constructor(
 
     private fun handleG(message: String) {
         if (message.length < 6) return
-        val data: List<String> = message.substring(1).split(',')
+        val content = if (message[0] == 'g') message.substring(1) else message
+        val data: List<String> = content.split(',')
         if (data.size < 6) return
         val byte1: Int = hexStrToInt(data[0])
         val byte2: Int = hexStrToInt(data[1])
@@ -359,12 +366,12 @@ class BluetoothViewModel @Inject constructor(
         }
 
         if (message[0] == 'd') {
-            handleD(message.substring(1))
+            handleD(message)
             return
         }
 
         if (message[0] == 'g') {
-            handleG(message.substring(1))
+            handleG(message)
             return
         }
     }
