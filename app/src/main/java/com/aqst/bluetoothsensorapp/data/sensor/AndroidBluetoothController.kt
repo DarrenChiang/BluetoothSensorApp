@@ -140,7 +140,6 @@ class AndroidBluetoothController(
 
                     BluetoothDataTransferService(socket).also {
                         dataTransferService = it
-                        initializeConnection()
 
                         emitAll(
                             it.listenForIncomingMessages()
@@ -156,10 +155,6 @@ class AndroidBluetoothController(
         }.onCompletion {
             closeConnection()
         }.flowOn(Dispatchers.IO)
-    }
-
-    private suspend fun initializeConnection() {
-        dataTransferService?.sendMessage("D".encodeToByteArray())
     }
 
     override suspend fun trySendMessage(message: String): BluetoothMessage? {
