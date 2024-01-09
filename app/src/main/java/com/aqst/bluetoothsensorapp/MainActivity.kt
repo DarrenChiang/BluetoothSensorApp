@@ -24,7 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.aqst.bluetoothsensorapp.presentation.BluetoothViewModel
-import com.aqst.bluetoothsensorapp.presentation.components.ChatScreen
+import com.aqst.bluetoothsensorapp.presentation.components.ConnectedScreen
 import com.aqst.bluetoothsensorapp.presentation.components.DeviceScreen
 import com.aqst.bluetoothsensorapp.ui.theme.BluetoothSensorAppTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -112,7 +112,7 @@ class MainActivity: ComponentActivity() {
                             }
                         }
                         state.isConnected -> {
-                            ChatScreen(
+                            ConnectedScreen(
                                 state = state,
                                 onDisconnect = viewModel::disconnectFromDevice,
                                 onStartPolling = viewModel::startPolling,

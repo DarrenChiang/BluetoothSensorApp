@@ -6,7 +6,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.github.mikephil.charting.charts.LineChart
 
 @Composable
-fun Chart(
+fun ChartDisplay(
     modifier: Modifier,
     chart: LineChart?
 ) {
