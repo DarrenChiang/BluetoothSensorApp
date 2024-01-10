@@ -97,6 +97,16 @@ class AndroidLineChartController(
         }
     }
 
+    override fun showOnly(label: String) {
+        _dataSets.update { dataSets ->
+            dataSets.forEach { entry ->
+                dataSets[entry.key]?.isVisible = entry.key == label
+            }
+
+            dataSets
+        }
+    }
+
     override suspend fun drawData() {
         val data = LineData()
 

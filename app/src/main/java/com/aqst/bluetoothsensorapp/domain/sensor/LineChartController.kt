@@ -20,5 +20,7 @@ interface LineChartController {
 
     fun setVisibility(label: String, isVisible: Boolean)
 
+    fun showOnly(label: String)
+
     suspend fun drawData()
 }
