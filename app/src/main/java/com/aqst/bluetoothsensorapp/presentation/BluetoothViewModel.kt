@@ -70,7 +70,7 @@ class BluetoothViewModel @Inject constructor(
                     lineChartController.addDataSet(deviceName, emptyList(), Color.RED)
                 }
 
-                // todo: set dataset to visible
+                lineChartController.showOnly(deviceName)
 
                 val delay = 1000.toLong()
                 val timer = Timer()
@@ -182,8 +182,8 @@ class BluetoothViewModel @Inject constructor(
                     }
                 }
             }
-        }.catch {
-            val errorMessage = it.message
+        }.catch { error ->
+            val errorMessage = error.message
             bluetoothController.closeConnection()
             _state.value.drawInterval?.cancel()
             _state.value.pollingInterval?.cancel()
