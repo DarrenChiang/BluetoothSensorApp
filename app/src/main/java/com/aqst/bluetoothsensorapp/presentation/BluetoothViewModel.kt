@@ -40,14 +40,12 @@ class BluetoothViewModel @Inject constructor(
         bluetoothController.scannedDevices,
         bluetoothController.pairedDevices,
         bluetoothController.deviceName,
-        lineChartController.dataSets,
         _state
-    ) { scannedDevices, pairedDevices, deviceName, dataSets, state ->
+    ) { scannedDevices, pairedDevices, deviceName, state ->
         state.copy(
             scannedDevices = scannedDevices,
             pairedDevices = pairedDevices,
-            deviceName = deviceName,
-            dataSets = dataSets
+            deviceName = deviceName
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _state.value)
 
@@ -65,26 +63,14 @@ class BluetoothViewModel @Inject constructor(
         bluetoothController.deviceName.onEach { deviceName ->
             if (deviceName !== null) {
                 lineChartController.configure()
-
-                if (!_state.value.dataSets.contains(deviceName)) {
-                    lineChartController.addDataSet(deviceName, emptyList(), Color.RED)
-                }
-
-                lineChartController.showOnly(deviceName)
+                lineChartController.drawData(emptyList())
 
                 val delay = 1000.toLong()
                 val timer = Timer()
 
                 val timerTask = object : TimerTask() {
                     override fun run() {
-                        GlobalScope.launch {
-                            val label = _state.value.deviceName
-
-                            if (label !== null) {
-                                lineChartController.setData(label, _state.value.chartData)
-                                lineChartController.drawData()
-                            }
-                        }
+                        lineChartController.drawData(_state.value.chartData)
                     }
                 }
 

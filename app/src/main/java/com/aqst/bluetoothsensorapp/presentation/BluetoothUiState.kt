@@ -17,7 +17,6 @@ data class BluetoothUiState(
     val errorMessage: String? = null,
     val lastCommand: String? = null,
     val pollingData: List<DataPoint> = emptyList(),
-    val dataSets: Map<String, LineChartDataSet> = emptyMap(),
     val chartData: List<Entry> = emptyList(),
     val chart: LineChart? = null,
     val pollingInterval: Timer? = null,
