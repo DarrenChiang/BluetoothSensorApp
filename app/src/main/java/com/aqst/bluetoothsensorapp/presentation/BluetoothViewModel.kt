@@ -357,4 +357,15 @@ class BluetoothViewModel @Inject constructor(
             )
         }
     }
+
+    fun reset() {
+        stopPolling()
+
+        _state.update {
+            it.copy(
+                pollingData = emptyList(),
+                chartData = emptyList()
+            )
+        }
+    }
 }

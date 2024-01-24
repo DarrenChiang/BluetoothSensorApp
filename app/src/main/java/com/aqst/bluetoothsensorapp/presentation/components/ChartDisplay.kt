@@ -7,12 +7,12 @@ import com.github.mikephil.charting.charts.LineChart
 
 @Composable
 fun ChartDisplay(
-    modifier: Modifier,
-    chart: LineChart?
+    chart: LineChart?,
+    chartModifier: Modifier
 ) {
     if (chart != null) {
         AndroidView(
-            modifier = modifier,
+            modifier = chartModifier,
             factory = { chart }
         )
     }

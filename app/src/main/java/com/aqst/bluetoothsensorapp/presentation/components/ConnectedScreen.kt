@@ -1,9 +1,11 @@
 package com.aqst.bluetoothsensorapp.presentation.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -16,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.dp
 import com.aqst.bluetoothsensorapp.presentation.BluetoothUiState
 
@@ -27,7 +30,8 @@ fun ConnectedScreen(
     onStartPolling: () -> Unit,
     onStopPolling: () -> Unit,
     onActivateZeroClick: () -> Unit,
-    onDeactivateZeroClick: () -> Unit
+    onDeactivateZeroClick: () -> Unit,
+    onReset: () -> Unit
 ) {
     val isPolling = state.pollingInterval !== null
     val zeroActivated = state.zeroValue !== null
@@ -43,7 +47,7 @@ fun ConnectedScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Status: Connected",
+                text = "Status: Connected to " + state.deviceName,
                 modifier = Modifier.weight(1f)
             )
             IconButton(onClick = onDisconnect) {
@@ -53,12 +57,24 @@ fun ConnectedScreen(
                 )
             }
         }
-        ChartDisplay(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            chart = state.chart
-        )
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .rotate(270f)
+            ) {
+                Text(text = "Leak Rate (PPM)")
+            }
+            ChartDisplay(
+                chart = state.chart,
+                chartModifier = Modifier
+                    .fillMaxSize()
+            )
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -88,6 +104,9 @@ fun ConnectedScreen(
                         Text(text = "Zero")
                     }
                 }
+            }
+            Button(onClick = onReset) {
+                Text(text = "Reset")
             }
         }
     }

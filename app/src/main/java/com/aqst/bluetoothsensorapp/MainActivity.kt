@@ -118,7 +118,8 @@ class MainActivity: ComponentActivity() {
                                 onStartPolling = viewModel::startPolling,
                                 onStopPolling = viewModel::stopPolling,
                                 onActivateZeroClick = viewModel::activateZero,
-                                onDeactivateZeroClick = viewModel::deactivateZero
+                                onDeactivateZeroClick = viewModel::deactivateZero,
+                                onReset = viewModel::reset
                             )
                         }
                         else -> {
