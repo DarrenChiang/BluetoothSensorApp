@@ -21,5 +21,6 @@ data class BluetoothUiState(
     val chart: LineChart? = null,
     val pollingInterval: Timer? = null,
     val drawInterval: Timer? = null,
-    val zeroValue: Float? = null
+    val zeroValue: Float? = null,
+    val isLeaking: Boolean = false
 )

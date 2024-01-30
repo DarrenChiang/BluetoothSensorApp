@@ -31,7 +31,8 @@ fun ConnectedScreen(
     onStopPolling: () -> Unit,
     onActivateZeroClick: () -> Unit,
     onDeactivateZeroClick: () -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onAcknowledgeLeak: () -> Unit
 ) {
     val isPolling = state.pollingInterval !== null
     val zeroActivated = state.zeroValue !== null
@@ -100,13 +101,16 @@ fun ConnectedScreen(
                     }
                 }
                 else -> {
-                    Button(onClick = onActivateZeroClick) {
+                    Button(onClick = onActivateZeroClick, enabled = isPolling) {
                         Text(text = "Zero")
                     }
                 }
             }
             Button(onClick = onReset) {
                 Text(text = "Reset")
+            }
+            Button(onClick = onAcknowledgeLeak, enabled = state.isLeaking) {
+                Text(text = if (state.isLeaking) "Leak Detected" else "No Leak")
             }
         }
     }

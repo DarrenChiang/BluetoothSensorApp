@@ -240,6 +240,12 @@ class BluetoothViewModel @Inject constructor(
 
                 val entry = Entry(xValue, yValue)
 
+                var isLeaking = it.isLeaking
+
+                if (it.zeroValue !== null && !isLeaking) {
+                    isLeaking = detectLeak(entry, it.chartData)
+                }
+
                 val chartData = if (it.chartData.size >= 120) {
                     it.chartData.drop(1) + entry
                 } else {
@@ -249,7 +255,8 @@ class BluetoothViewModel @Inject constructor(
                 it.copy(
                     lastCommand = null,
                     pollingData = pollingData,
-                    chartData = chartData
+                    chartData = chartData,
+                    isLeaking = isLeaking
                 )
             }
         } catch (error: Throwable) {
@@ -364,8 +371,23 @@ class BluetoothViewModel @Inject constructor(
         _state.update {
             it.copy(
                 pollingData = emptyList(),
-                chartData = emptyList()
+                chartData = emptyList(),
+                zeroValue = null
             )
+        }
+    }
+
+    private fun detectLeak(newData: Entry, data: List<Entry>): Boolean {
+        if (newData.y > data.last().y) {
+            return true
+        }
+
+        return false
+    }
+
+    fun acknowledgeLeak() {
+        _state.update {
+            it.copy(isLeaking = false)
         }
     }
 }

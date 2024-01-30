@@ -119,7 +119,8 @@ class MainActivity: ComponentActivity() {
                                 onStopPolling = viewModel::stopPolling,
                                 onActivateZeroClick = viewModel::activateZero,
                                 onDeactivateZeroClick = viewModel::deactivateZero,
-                                onReset = viewModel::reset
+                                onReset = viewModel::reset,
+                                onAcknowledgeLeak = viewModel::acknowledgeLeak
                             )
                         }
                         else -> {
