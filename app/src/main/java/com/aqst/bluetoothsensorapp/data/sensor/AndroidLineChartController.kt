@@ -23,6 +23,7 @@ class AndroidLineChartController(
 
         // Customize Y-axis
         val yAxis = chart.axisLeft
+        yAxis.axisMinimum = 0f
 
         yAxis.valueFormatter = object : ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
