@@ -46,6 +46,10 @@ class AndroidBluetoothController(
 
     private var dataTransferService: BluetoothDataTransferService? = null
 
+    private val _deviceName = MutableStateFlow<String?>(null)
+    override val deviceName: StateFlow<String?>
+        get() = _deviceName.asStateFlow()
+
     private val _isConnected = MutableStateFlow<Boolean>(false)
     override val isConnected: StateFlow<Boolean>
         get() = _isConnected.asStateFlow()
@@ -73,6 +77,7 @@ class AndroidBluetoothController(
     private val bluetoothStateReceiver = BluetoothStateReceiver { isConnected, bluetoothDevice ->
         if (bluetoothAdapter?.bondedDevices?.contains(bluetoothDevice) == true) {
             _isConnected.update { isConnected }
+            _deviceName.update { if (isConnected) bluetoothDevice.name else null }
         } else {
             CoroutineScope(Dispatchers.IO).launch {
                 _errors.emit("Can't connect to a non-paired device.")

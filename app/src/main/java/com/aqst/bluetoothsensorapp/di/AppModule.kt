@@ -2,7 +2,9 @@ package com.aqst.bluetoothsensorapp.di
 
 import android.content.Context
 import com.aqst.bluetoothsensorapp.data.sensor.AndroidBluetoothController
+import com.aqst.bluetoothsensorapp.data.sensor.AndroidLineChartController
 import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothController
+import com.aqst.bluetoothsensorapp.domain.sensor.LineChartController
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,5 +19,11 @@ object AppModule {
     @Singleton
     fun provideBluetoothController(@ApplicationContext context: Context): BluetoothController {
         return AndroidBluetoothController(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideLineChartController(@ApplicationContext context: Context): LineChartController {
+        return AndroidLineChartController(context)
     }
 }

@@ -6,13 +6,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.github.mikephil.charting.charts.LineChart
 
 @Composable
-fun Chart(
-    modifier: Modifier,
-    chart: LineChart?
+fun ChartDisplay(
+    chart: LineChart?,
+    chartModifier: Modifier
 ) {
     if (chart != null) {
         AndroidView(
-            modifier = modifier,
+            modifier = chartModifier,
             factory = { chart }
         )
     }

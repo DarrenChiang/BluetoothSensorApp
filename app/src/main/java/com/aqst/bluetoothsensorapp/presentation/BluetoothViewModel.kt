@@ -1,6 +1,5 @@
 package com.aqst.bluetoothsensorapp.presentation
 
-import android.content.Context
 import android.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,14 +8,10 @@ import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothDeviceDomain
 import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothMessage
 import com.aqst.bluetoothsensorapp.domain.sensor.ConnectionResult
 import com.aqst.bluetoothsensorapp.domain.sensor.DataPoint
-import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.components.XAxis
+import com.aqst.bluetoothsensorapp.domain.sensor.LineChartController
 import com.github.mikephil.charting.data.Entry
-import com.github.mikephil.charting.data.LineData
-import com.github.mikephil.charting.data.LineDataSet
-import com.github.mikephil.charting.formatter.ValueFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,31 +24,28 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 import java.util.Timer
 import java.util.TimerTask
 import javax.inject.Inject
 import kotlin.math.log10
-import kotlin.math.pow
 
 @HiltViewModel
 class BluetoothViewModel @Inject constructor(
     private val bluetoothController: BluetoothController,
-    @ApplicationContext private val context: Context
+    private val lineChartController: LineChartController
 ): ViewModel() {
     private val _state = MutableStateFlow(BluetoothUiState())
 
     val state = combine(
         bluetoothController.scannedDevices,
         bluetoothController.pairedDevices,
+        bluetoothController.deviceName,
         _state
-    ) { scannedDevices, pairedDevices, state ->
+    ) { scannedDevices, pairedDevices, deviceName, state ->
         state.copy(
             scannedDevices = scannedDevices,
-            pairedDevices = pairedDevices
+            pairedDevices = pairedDevices,
+            deviceName = deviceName
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _state.value)
 
@@ -61,56 +53,42 @@ class BluetoothViewModel @Inject constructor(
 
     init {
         bluetoothController.isConnected.onEach { isConnected ->
-            val chart = LineChart(context)
-            setChartConfig(chart)
-
-            val delay = 1000.toLong()
-            val timer = Timer()
-
-            val timerTask = object : TimerTask() {
-                override fun run() {
-                    updateChart()
-                }
-            }
-
-            // Schedule the TimerTask to run periodically
-            timer.schedule(timerTask, 0, delay)
-
             _state.update {
                 it.copy(
-                    isConnected = isConnected,
-                    chart = chart,
-                    drawInterval = timer
+                    isConnected = isConnected
                 )
             }
         }.launchIn(viewModelScope)
 
+        bluetoothController.deviceName.onEach { deviceName ->
+            if (deviceName !== null) {
+                lineChartController.configure()
+                lineChartController.drawData(emptyList())
+
+                val delay = 1000.toLong()
+                val timer = Timer()
+
+                val timerTask = object : TimerTask() {
+                    override fun run() {
+                        lineChartController.drawData(_state.value.chartData)
+                    }
+                }
+
+                // Schedule the TimerTask to run periodically
+                timer.schedule(timerTask, 0, delay)
+
+                _state.update {
+                    it.copy(
+                        chart = lineChartController.chart,
+                        drawInterval = timer
+                    )
+                }
+            }
+        }.launchIn((viewModelScope))
+
         bluetoothController.errors.onEach { error ->
             _state.update { it.copy(errorMessage = error) }
         }.launchIn(viewModelScope)
-    }
-
-    private fun setChartConfig(chart: LineChart) {
-        // Customize X-axis
-        val xAxis = chart.xAxis
-        xAxis?.position = XAxis.XAxisPosition.BOTTOM
-//        xAxis?.setLabelCount(data.size, true)
-
-        // Customize Y-axis
-        val yAxis = chart.axisLeft
-
-        yAxis.valueFormatter = object : ValueFormatter() {
-            override fun getFormattedValue(value: Float): String {
-                if (value.compareTo(0) == 0) return "0"
-                return String.format("%.2e", 10.0.pow(value.toDouble()))
-            }
-        }
-
-        chart.axisRight.isEnabled = false
-        chart.description?.isEnabled = false
-        chart.legend?.isEnabled = false
-        chart.setTouchEnabled(true)
-        chart.contentDescription = null
     }
 
     fun connectToDevice(device: BluetoothDeviceDomain) {
@@ -190,8 +168,8 @@ class BluetoothViewModel @Inject constructor(
                     }
                 }
             }
-        }.catch {
-            val errorMessage = it.message
+        }.catch { error ->
+            val errorMessage = error.message
             bluetoothController.closeConnection()
             _state.value.drawInterval?.cancel()
             _state.value.pollingInterval?.cancel()
@@ -219,49 +197,6 @@ class BluetoothViewModel @Inject constructor(
                 lastCommand = command
             )
         }
-    }
-
-    private fun stringToDate(dateString: String, timestampString: String): Date {
-        val dateFormat = SimpleDateFormat("dd/MM/yy", Locale.US)
-        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
-
-        val date = dateFormat.parse(dateString)
-        val time = timeFormat.parse(timestampString)
-
-        val calendar = Calendar.getInstance()
-        calendar.time = date
-
-        val timeCalendar = Calendar.getInstance()
-        timeCalendar.time = time
-
-        // Extract hours, minutes, and seconds from the timeCalendar
-        val hours = timeCalendar.get(Calendar.HOUR_OF_DAY)
-        val minutes = timeCalendar.get(Calendar.MINUTE)
-        val seconds = timeCalendar.get(Calendar.SECOND)
-
-        // Set hours, minutes, and seconds to the calendar
-        calendar.set(Calendar.HOUR_OF_DAY, hours)
-        calendar.set(Calendar.MINUTE, minutes)
-        calendar.set(Calendar.SECOND, seconds)
-
-        return calendar.time // Returns the combined Date object
-    }
-
-    private fun updateChart() {
-        val chart = _state.value.chart
-        val data = _state.value.chartData
-
-        // Create a LineDataSet from the entries
-        val dataSet = LineDataSet(data, "Data Set")
-
-        // Set data and render the chart
-        dataSet.color = Color.RED
-        dataSet.valueTextColor = 2
-        dataSet.mode = LineDataSet.Mode.LINEAR
-        dataSet.setDrawValues(true)
-        dataSet.lineWidth = 2.0f
-        chart?.data = LineData(dataSet)
-        chart?.invalidate()
     }
 
     private fun handleD(message: String) {
@@ -305,6 +240,12 @@ class BluetoothViewModel @Inject constructor(
 
                 val entry = Entry(xValue, yValue)
 
+                var isLeaking = it.isLeaking
+
+                if (it.zeroValue !== null && !isLeaking) {
+                    isLeaking = detectLeak(entry, it.chartData)
+                }
+
                 val chartData = if (it.chartData.size >= 120) {
                     it.chartData.drop(1) + entry
                 } else {
@@ -314,7 +255,8 @@ class BluetoothViewModel @Inject constructor(
                 it.copy(
                     lastCommand = null,
                     pollingData = pollingData,
-                    chartData = chartData
+                    chartData = chartData,
+                    isLeaking = isLeaking
                 )
             }
         } catch (error: Throwable) {
@@ -420,6 +362,32 @@ class BluetoothViewModel @Inject constructor(
             it.copy(
                 zeroValue = null
             )
+        }
+    }
+
+    fun reset() {
+        stopPolling()
+
+        _state.update {
+            it.copy(
+                pollingData = emptyList(),
+                chartData = emptyList(),
+                zeroValue = null
+            )
+        }
+    }
+
+    private fun detectLeak(newData: Entry, data: List<Entry>): Boolean {
+        if (newData.y > data.last().y) {
+            return true
+        }
+
+        return false
+    }
+
+    fun acknowledgeLeak() {
+        _state.update {
+            it.copy(isLeaking = false)
         }
     }
 }
