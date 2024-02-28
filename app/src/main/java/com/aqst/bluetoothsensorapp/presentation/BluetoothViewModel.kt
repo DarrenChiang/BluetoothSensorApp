@@ -1,8 +1,8 @@
 package com.aqst.bluetoothsensorapp.presentation
 
-import android.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aqst.bluetoothsensorapp.data.sensor.FileReader
 import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothController
 import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothDeviceDomain
 import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothMessage
@@ -11,8 +11,8 @@ import com.aqst.bluetoothsensorapp.domain.sensor.DataPoint
 import com.aqst.bluetoothsensorapp.domain.sensor.LineChartController
 import com.github.mikephil.charting.data.Entry
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,13 +26,15 @@ import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.Timer
 import java.util.TimerTask
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.math.log10
 
 @HiltViewModel
 class BluetoothViewModel @Inject constructor(
     private val bluetoothController: BluetoothController,
-    private val lineChartController: LineChartController
+    private val lineChartController: LineChartController,
+    private val fileReader: FileReader
 ): ViewModel() {
     private val _state = MutableStateFlow(BluetoothUiState())
 
@@ -97,7 +99,8 @@ class BluetoothViewModel @Inject constructor(
 
             it.copy(
                 isConnecting = true,
-                isScanning = false
+                isScanning = false,
+                isTestDevice = false
             )
         }
 
@@ -111,13 +114,16 @@ class BluetoothViewModel @Inject constructor(
         bluetoothController.closeConnection()
         _state.value.drawInterval?.cancel()
         _state.value.pollingInterval?.cancel()
+        _state.value.testDataInterval?.cancel()
 
         _state.update {
             it.copy(
                 isConnected = false,
                 isConnecting = false,
                 drawInterval = null,
-                pollingInterval = null
+                pollingInterval = null,
+                isTestDevice = false,
+                testDataInterval = null
             )
         }
     }
@@ -319,9 +325,7 @@ class BluetoothViewModel @Inject constructor(
     }
 
     fun startPolling() {
-        val pollingInterval = _state.value.pollingInterval
-
-        if (pollingInterval == null) {
+        if (_state.value.pollingInterval == null) {
             val delay = 100.toLong()
             val timer = Timer()
 
@@ -388,6 +392,145 @@ class BluetoothViewModel @Inject constructor(
     fun acknowledgeLeak() {
         _state.update {
             it.copy(isLeaking = false)
+        }
+    }
+
+    private fun addDataPoint(dataPoint: DataPoint) {
+        _state.update {
+            val pollingData = if (it.pollingData.size >= 120) {
+                it.pollingData.drop(1) + dataPoint
+            } else {
+                it.pollingData + dataPoint
+            }
+
+            val xValue: Float = if (it.chartData.isNotEmpty()) {
+                it.chartData.last().x + 1
+            } else {
+                1.toFloat()
+            }
+
+            var yValue: Float = dataPoint.ppm.toFloat()
+
+            if (it.zeroValue !== null && it.zeroValue >= yValue) {
+                yValue = 0.toFloat()
+            }
+
+            if (yValue > 0) {
+                yValue = log10(yValue)
+            }
+
+            val entry = Entry(xValue, yValue)
+
+            var isLeaking = it.isLeaking
+
+            if (it.zeroValue !== null && !isLeaking) {
+                isLeaking = detectLeak(entry, it.chartData)
+            }
+
+            val chartData = if (it.chartData.size >= 120) {
+                it.chartData.drop(1) + entry
+            } else {
+                it.chartData + entry
+            }
+
+            it.copy(
+                lastCommand = null,
+                pollingData = pollingData,
+                chartData = chartData,
+                isLeaking = isLeaking
+            )
+        }
+    }
+
+    fun addTestDataPoint() {
+        _state.update {
+            val data = it.testData
+            val index = it.testDataIndex
+
+            if (index >= data.size) {
+                it.testDataInterval?.cancel()
+
+                it.copy(
+                    testDataInterval = null,
+                    testDataIndex = 0
+                )
+            } else {
+                addDataPoint(it.testData[index])
+                it.copy(testDataIndex = index + 1)
+            }
+        }
+    }
+
+    private fun getTestField(field: String): String {
+        if (field.length > 2) {
+            return field.substring(1, field.length - 1)
+        }
+
+        return field
+    }
+
+    fun loadTestDevice() {
+        val content = fileReader.readFile("TestData.txt")
+        val lines = content.split("\n")
+        val headerCondition: (String) -> Boolean = { it.contains("Time(Seconds)") }
+        val dataPoints = mutableListOf<DataPoint>()
+        var index = lines.indexOfFirst(headerCondition) + 1
+
+        while (index < lines.size - 1) {
+            val line = lines[index]
+            val fields = line.split(",").map { getTestField(it) }
+            val mv = BigDecimal(fields[1])
+            val ppm = BigDecimal(fields[2])
+            val time = fields[5]
+            val date = fields[6]
+            dataPoints.add(DataPoint(ppm, mv, time, date, "", ""))
+            index++
+        }
+
+        lineChartController.configure()
+        lineChartController.drawData(emptyList())
+
+        val delay = 1000.toLong()
+        val timer = Timer()
+
+        val timerTask = object : TimerTask() {
+            override fun run() {
+                lineChartController.drawData(_state.value.chartData)
+            }
+        }
+
+        // Schedule the TimerTask to run periodically
+        timer.schedule(timerTask, 0, delay)
+
+        _state.update {
+            if (it.isScanning) bluetoothController.stopDiscovery()
+
+            it.copy(
+                isConnected = true,
+                isScanning = false,
+                isTestDevice = true,
+                testData = dataPoints,
+                testDataIndex = 0,
+                chart = lineChartController.chart,
+                drawInterval = timer
+            )
+        }
+    }
+
+    fun loadTestData() {
+        if (_state.value.testDataInterval == null) {
+            val delay = 500.toLong()
+            val timer = Timer()
+
+            val timerTask = object : TimerTask() {
+                override fun run() {
+                    addTestDataPoint()
+                }
+            }
+
+            // Schedule the TimerTask to run periodically
+            timer.schedule(timerTask, 0, delay)
+            _state.update { it.copy(testDataInterval = timer) }
         }
     }
 }

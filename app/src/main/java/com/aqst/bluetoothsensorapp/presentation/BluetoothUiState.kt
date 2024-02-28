@@ -22,5 +22,9 @@ data class BluetoothUiState(
     val pollingInterval: Timer? = null,
     val drawInterval: Timer? = null,
     val zeroValue: Float? = null,
-    val isLeaking: Boolean = false
+    val isLeaking: Boolean = false,
+    val isTestDevice: Boolean = false,
+    val testData: List<DataPoint> = emptyList(),
+    val testDataInterval: Timer? = null,
+    val testDataIndex: Int = 0
 )

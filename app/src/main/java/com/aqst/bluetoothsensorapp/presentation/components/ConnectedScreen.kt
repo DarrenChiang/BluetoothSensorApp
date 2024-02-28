@@ -32,7 +32,8 @@ fun ConnectedScreen(
     onActivateZeroClick: () -> Unit,
     onDeactivateZeroClick: () -> Unit,
     onReset: () -> Unit,
-    onAcknowledgeLeak: () -> Unit
+    onAcknowledgeLeak: () -> Unit,
+    onLoadTestData: () -> Unit
 ) {
     val isPolling = state.pollingInterval !== null
     val zeroActivated = state.zeroValue !== null
@@ -48,7 +49,7 @@ fun ConnectedScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Status: Connected to " + state.deviceName,
+                text = "Status: Connected to " + (if (state.isTestDevice) "Test Device"  else state.deviceName),
                 modifier = Modifier.weight(1f)
             )
             IconButton(onClick = onDisconnect) {
@@ -84,13 +85,13 @@ fun ConnectedScreen(
         ) {
             when {
                 isPolling -> {
-                    Button(onClick = onStopPolling) {
+                    Button(onClick = onStopPolling, enabled = !state.isTestDevice) {
                         Text(text = "Stop Polling")
                     }
                 }
                 else -> {
-                    Button(onClick = onStartPolling) {
-                        Text(text = "Start Polling")
+                    Button(onClick = if (state.isTestDevice) onLoadTestData else onStartPolling) {
+                        Text(text = if (state.isTestDevice) "Load Test Data" else "Start Polling")
                     }
                 }
             }

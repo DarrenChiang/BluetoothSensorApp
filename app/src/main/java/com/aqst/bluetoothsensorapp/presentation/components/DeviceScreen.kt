@@ -24,11 +24,15 @@ fun DeviceScreen(
     state: BluetoothUiState,
     onStartScan: () -> Unit,
     onStopScan: () -> Unit,
-    onDeviceClick: (BluetoothDevice) -> Unit
+    onDeviceClick: (BluetoothDevice) -> Unit,
+    onLoadTestDevice: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
     ) {
+        Button(onClick = onLoadTestDevice) {
+            Text(text = "Use Test Data")
+        }
         BluetoothDeviceList(
             pairedDevices = state.pairedDevices,
             scannedDevices = state.scannedDevices,
