@@ -120,7 +120,8 @@ class MainActivity: ComponentActivity() {
                                 onActivateZeroClick = viewModel::activateZero,
                                 onDeactivateZeroClick = viewModel::deactivateZero,
                                 onReset = viewModel::reset,
-                                onAcknowledgeLeak = viewModel::acknowledgeLeak
+                                onAcknowledgeLeak = viewModel::acknowledgeLeak,
+                                onLoadTestData = viewModel::loadTestData
                             )
                         }
                         else -> {
@@ -128,7 +129,8 @@ class MainActivity: ComponentActivity() {
                                 state = state,
                                 onStartScan = viewModel::startScan,
                                 onStopScan = viewModel::stopScan,
-                                onDeviceClick = viewModel::connectToDevice
+                                onDeviceClick = viewModel::connectToDevice,
+                                onLoadTestDevice = viewModel::loadTestDevice
                             )
                         }
                     }

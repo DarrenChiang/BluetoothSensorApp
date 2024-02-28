@@ -3,6 +3,7 @@ package com.aqst.bluetoothsensorapp.di
 import android.content.Context
 import com.aqst.bluetoothsensorapp.data.sensor.AndroidBluetoothController
 import com.aqst.bluetoothsensorapp.data.sensor.AndroidLineChartController
+import com.aqst.bluetoothsensorapp.data.sensor.FileReader
 import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothController
 import com.aqst.bluetoothsensorapp.domain.sensor.LineChartController
 import dagger.Module
@@ -25,5 +26,11 @@ object AppModule {
     @Singleton
     fun provideLineChartController(@ApplicationContext context: Context): LineChartController {
         return AndroidLineChartController(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideFileReader(@ApplicationContext context: Context): FileReader {
+        return FileReader(context)
     }
 }
