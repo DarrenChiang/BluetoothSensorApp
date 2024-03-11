@@ -9,5 +9,7 @@ interface LineChartController {
 
     fun configure()
 
+    fun setRange(min: Float, max: Float)
+
     fun drawData(data: List<Entry>)
 }

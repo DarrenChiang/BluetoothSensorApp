@@ -39,6 +39,13 @@ class AndroidLineChartController(
         chart.contentDescription = null
     }
 
+    override fun setRange(min: Float, max: Float) {
+        // Customize Y-axis
+        val yAxis = chart.axisLeft
+        yAxis.axisMinimum = min
+        yAxis.axisMaximum = max
+    }
+
     override fun drawData(data: List<Entry>) {
         val lineDataSet = LineDataSet(data, "Sensor Data")
         lineDataSet.color = Color.RED

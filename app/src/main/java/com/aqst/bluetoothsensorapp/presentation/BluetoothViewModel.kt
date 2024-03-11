@@ -12,7 +12,6 @@ import com.aqst.bluetoothsensorapp.domain.sensor.LineChartController
 import com.github.mikephil.charting.data.Entry
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,7 +25,6 @@ import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.Timer
 import java.util.TimerTask
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.math.log10
 
@@ -210,7 +208,9 @@ class BluetoothViewModel @Inject constructor(
             val startIndex = message.indexOfFirst { it != 'd' }
             val content = message.substring(startIndex)
             val data: List<String> = content.split(',')
+
             if (data.size < 6) return
+
             val readingPPM = BigDecimal(data[0])
             val readingMV = BigDecimal(data[1])
             val time: String = data[4]
@@ -219,52 +219,8 @@ class BluetoothViewModel @Inject constructor(
             val range: String = data.getOrElse(6, defaultFunc)
             val alarmConditions: String = data.getOrElse(8, defaultFunc)
 
-            _state.update {
-                val incomingData = DataPoint(readingPPM, readingMV, time, date, range, alarmConditions)
-
-                val pollingData = if (it.pollingData.size >= 120) {
-                    it.pollingData.drop(1) + incomingData
-                } else {
-                    it.pollingData + incomingData
-                }
-
-                val xValue: Float = if (it.chartData.isNotEmpty()) {
-                    it.chartData.last().x + 1
-                } else {
-                    1.toFloat()
-                }
-
-                var yValue: Float = readingPPM.toFloat()
-
-                if (it.zeroValue !== null && it.zeroValue >= yValue) {
-                    yValue = 0.toFloat()
-                }
-
-                if (yValue > 0) {
-                    yValue = log10(yValue)
-                }
-
-                val entry = Entry(xValue, yValue)
-
-                var isLeaking = it.isLeaking
-
-                if (it.zeroValue !== null && !isLeaking) {
-                    isLeaking = detectLeak(entry, it.chartData)
-                }
-
-                val chartData = if (it.chartData.size >= 120) {
-                    it.chartData.drop(1) + entry
-                } else {
-                    it.chartData + entry
-                }
-
-                it.copy(
-                    lastCommand = null,
-                    pollingData = pollingData,
-                    chartData = chartData,
-                    isLeaking = isLeaking
-                )
-            }
+            val incomingData = DataPoint(readingPPM, readingMV, time, date, range, alarmConditions)
+            addDataPoint(incomingData)
         } catch (error: Throwable) {
             return
         }
@@ -395,6 +351,26 @@ class BluetoothViewModel @Inject constructor(
         }
     }
 
+    private fun manageQueue(newValue: Entry, queue: List<Entry>, orderFunction: (Entry, Entry) -> Boolean): List<Entry> {
+        if (queue.isEmpty()) {
+            return listOf(newValue)
+        } else {
+            val prevExtremeValue = queue[0]
+
+            return if (orderFunction(newValue, prevExtremeValue)) {
+                listOf(newValue)
+            } else {
+                var tempQueue = queue
+
+                while (orderFunction(newValue, tempQueue.last())) {
+                    tempQueue = tempQueue.dropLast(1)
+                }
+
+                tempQueue + newValue
+            }
+        }
+    }
+
     private fun addDataPoint(dataPoint: DataPoint) {
         _state.update {
             val pollingData = if (it.pollingData.size >= 120) {
@@ -410,6 +386,7 @@ class BluetoothViewModel @Inject constructor(
             }
 
             var yValue: Float = dataPoint.ppm.toFloat()
+
 
             if (it.zeroValue !== null && it.zeroValue >= yValue) {
                 yValue = 0.toFloat()
@@ -427,22 +404,49 @@ class BluetoothViewModel @Inject constructor(
                 isLeaking = detectLeak(entry, it.chartData)
             }
 
+            var tempMaxQueue = it.chartMaxQueue
+            var tempMinQueue = it.chartMinQueue
+
             val chartData = if (it.chartData.size >= 120) {
+                val droppedData = it.chartData[0]
+
+                if (droppedData.y.equals(tempMaxQueue[0].y)) {
+                    tempMaxQueue = tempMaxQueue.drop(1)
+                }
+
+                if (droppedData.y.equals(tempMinQueue[0].y)) {
+                    tempMinQueue = tempMinQueue.drop(1)
+                }
+
                 it.chartData.drop(1) + entry
             } else {
                 it.chartData + entry
             }
 
+            var chartMaxQueue = manageQueue(entry, tempMaxQueue) { a, b -> a.y > b.y }
+            var chartMinQueue = manageQueue(entry, tempMinQueue) { a, b -> a.y < b.y }
+
+            val rangeMax: Float = chartMaxQueue[0].y * 1.2f
+            val rangeMin: Float = chartMinQueue[0].y * 0.8f
+
+            lineChartController.setRange(rangeMin, rangeMax)
+
             it.copy(
                 lastCommand = null,
                 pollingData = pollingData,
                 chartData = chartData,
+                chartMaxQueue = chartMaxQueue,
+                chartMinQueue = chartMinQueue,
                 isLeaking = isLeaking
             )
         }
     }
 
     fun addTestDataPoint() {
+        if (_state.value.testDataIndex < _state.value.testData.size) {
+            addDataPoint(_state.value.testData[_state.value.testDataIndex])
+        }
+
         _state.update {
             val data = it.testData
             val index = it.testDataIndex
@@ -455,7 +459,6 @@ class BluetoothViewModel @Inject constructor(
                     testDataIndex = 0
                 )
             } else {
-                addDataPoint(it.testData[index])
                 it.copy(testDataIndex = index + 1)
             }
         }
