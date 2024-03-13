@@ -1,11 +1,9 @@
 package com.aqst.bluetoothsensorapp.presentation.components
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -19,8 +17,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import com.aqst.bluetoothsensorapp.presentation.BluetoothUiState
+
+fun Modifier.rotateVertically(clockwise: Boolean = true): Modifier {
+    val rotate = rotate(if (clockwise) 90f else -90f)
+
+    val adjustBounds = layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+
+        layout(placeable.height, placeable.width) {
+            placeable.place(
+                x = -(placeable.width / 2 - placeable.height / 2),
+                y = -(placeable.height / 2 - placeable.width / 2)
+            )
+        }
+    }
+    return rotate then adjustBounds
+}
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -65,12 +80,10 @@ fun ConnectedScreen(
                 .weight(1f),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .rotate(270f)
-            ) {
-                Text(text = "Leak Rate (PPM)")
-            }
+            Text(
+                text = "Leak Rate (PPM)",
+                modifier = Modifier.rotateVertically(clockwise = false)
+            )
             ChartDisplay(
                 chart = state.chart,
                 chartModifier = Modifier
