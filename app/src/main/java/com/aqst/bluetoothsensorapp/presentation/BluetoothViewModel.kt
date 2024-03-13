@@ -379,14 +379,29 @@ class BluetoothViewModel @Inject constructor(
                 it.pollingData + dataPoint
             }
 
+            val useGolayFilter = true
+
+            if (useGolayFilter && pollingData.size < 13) {
+                it.copy(
+                    lastCommand = null,
+                    pollingData = pollingData
+                )
+            }
+
+            val newPollingValue: Float = if (useGolayFilter) {
+                val filteredDataPoint = applyGolayFilter(pollingData)
+                filteredDataPoint.ppm.toFloat()
+            } else {
+                dataPoint.ppm.toFloat()
+            }
+
             val xValue: Float = if (it.chartData.isNotEmpty()) {
                 it.chartData.last().x + 1
             } else {
                 1.toFloat()
             }
 
-            var yValue: Float = dataPoint.ppm.toFloat()
-
+            var yValue: Float = newPollingValue
 
             if (it.zeroValue !== null && it.zeroValue >= yValue) {
                 yValue = 0.toFloat()
@@ -426,8 +441,8 @@ class BluetoothViewModel @Inject constructor(
             var chartMaxQueue = manageQueue(entry, tempMaxQueue) { a, b -> a.y > b.y }
             var chartMinQueue = manageQueue(entry, tempMinQueue) { a, b -> a.y < b.y }
 
-            val rangeMax: Float = chartMaxQueue[0].y * 1.2f
-            val rangeMin: Float = chartMinQueue[0].y * 0.8f
+            val rangeMax: Float = chartMaxQueue[0].y * 1.1f
+            val rangeMin: Float = chartMinQueue[0].y * 0.9f
 
             lineChartController.setRange(rangeMin, rangeMax)
 
@@ -440,6 +455,25 @@ class BluetoothViewModel @Inject constructor(
                 isLeaking = isLeaking
             )
         }
+    }
+
+    private fun applyGolayFilter(pollingData: List<DataPoint>): DataPoint {
+        val coefficients = listOf(0.27473, 0.24176, 0.20879, 0.17582, 0.14286, 0.10989, 0.07692, 0.04396, 0.01099, -0.02198, -0.05495, -0.08791, -0.12088)
+        val recentData = pollingData.takeLast(coefficients.size)
+        var i = 0
+        var ppm = BigDecimal(0)
+        var mv = BigDecimal(0)
+
+        while (i < recentData.size) {
+            val dataPoint = recentData[recentData.size - 1 - i]
+            val coefficient = BigDecimal(coefficients[i])
+            ppm += coefficient * dataPoint.ppm
+            mv += coefficient * dataPoint.mv
+            i++
+        }
+
+        val lastPoint = pollingData.last()
+        return DataPoint(ppm, mv, lastPoint.time, lastPoint.date, lastPoint.range, lastPoint.alarmConditions)
     }
 
     fun addTestDataPoint() {
