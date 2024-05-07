@@ -107,23 +107,27 @@ class BluetoothViewModel @Inject constructor(
             .listen()
     }
 
-    fun disconnectFromDevice() {
-        deviceConnectionJob?.cancel()
-        bluetoothController.closeConnection()
-        _state.value.drawInterval?.cancel()
-        _state.value.pollingInterval?.cancel()
-        _state.value.testDataInterval?.cancel()
-
+    private fun returnToDeviceScreen() {
         _state.update {
             it.copy(
                 isConnected = false,
                 isConnecting = false,
                 drawInterval = null,
                 pollingInterval = null,
+                isSettingLimit = false,
                 isTestDevice = false,
                 testDataInterval = null
             )
         }
+    }
+
+    fun disconnectFromDevice() {
+        deviceConnectionJob?.cancel()
+        bluetoothController.closeConnection()
+        _state.value.drawInterval?.cancel()
+        _state.value.pollingInterval?.cancel()
+        _state.value.testDataInterval?.cancel()
+        returnToDeviceScreen()
     }
 
     fun sendMessage(message: String) {
@@ -160,33 +164,16 @@ class BluetoothViewModel @Inject constructor(
                 is ConnectionResult.Error -> {
                     _state.value.drawInterval?.cancel()
                     _state.value.pollingInterval?.cancel()
-
-                    _state.update {
-                        it.copy(
-                            isConnected = false,
-                            isConnecting = false,
-                            errorMessage = result.message,
-                            drawInterval = null,
-                            pollingInterval = null
-                        )
-                    }
+                    _state.update { it.copy(errorMessage = result.message) }
+                    returnToDeviceScreen()
                 }
             }
         }.catch { error ->
-            val errorMessage = error.message
             bluetoothController.closeConnection()
             _state.value.drawInterval?.cancel()
             _state.value.pollingInterval?.cancel()
-
-            _state.update {
-                it.copy(
-                    isConnected = false,
-                    isConnecting = false,
-                    drawInterval = null,
-                    pollingInterval = null,
-                    errorMessage = errorMessage
-                )
-            }
+            _state.update { it.copy(errorMessage = error.message) }
+            returnToDeviceScreen()
         }.launchIn(viewModelScope)
     }
 
@@ -306,23 +293,32 @@ class BluetoothViewModel @Inject constructor(
         _state.value.pollingInterval?.cancel()
         _state.update { it.copy(pollingInterval = null) }
     }
+    fun openLimitConfig() {
+        _state.update { it.copy(isSettingLimit = true) }
+    }
 
-    fun activateZero() {
-        if (_state.value.zeroValue == null && _state.value.pollingData.isNotEmpty()) {
-            _state.update {
-                it.copy(
-                    zeroValue = it.pollingData.last().ppm.toFloat()
-                )
-            }
+    fun deleteLimit() {
+        _state.update {
+            it.copy(
+                isSettingLimit = false,
+                limitCoefficient = null,
+                limitExponent = null
+            )
         }
     }
 
-    fun deactivateZero() {
+    fun setLimit(coefficient: Float, exponent: Int) {
         _state.update {
             it.copy(
-                zeroValue = null
+                isSettingLimit = false,
+                limitCoefficient = coefficient,
+                limitExponent = exponent
             )
         }
+    }
+
+    fun closeLimitConfig() {
+        _state.update { it.copy(isSettingLimit = false) }
     }
 
     fun reset() {
@@ -343,12 +339,6 @@ class BluetoothViewModel @Inject constructor(
         }
 
         return false
-    }
-
-    fun acknowledgeLeak() {
-        _state.update {
-            it.copy(isLeaking = false)
-        }
     }
 
     private fun manageQueue(newValue: Entry, queue: List<Entry>, orderFunction: (Entry, Entry) -> Boolean): List<Entry> {

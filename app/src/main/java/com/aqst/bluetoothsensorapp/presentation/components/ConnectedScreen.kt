@@ -44,14 +44,15 @@ fun ConnectedScreen(
     onDisconnect: () -> Unit,
     onStartPolling: () -> Unit,
     onStopPolling: () -> Unit,
-    onActivateZeroClick: () -> Unit,
-    onDeactivateZeroClick: () -> Unit,
+    onOpenLimitConfig: () -> Unit,
+    onDeleteLimit: () -> Unit,
+    onSetLimit: (Float, Int) -> Unit,
+    onCloseLimitConfig: () -> Unit,
     onReset: () -> Unit,
-    onAcknowledgeLeak: () -> Unit,
     onLoadTestData: () -> Unit
 ) {
     val isPolling = state.pollingInterval !== null
-    val zeroActivated = state.zeroValue !== null
+    val hasLimit = state.limitCoefficient !== null && state.limitExponent !== null
 
     Column(
         modifier = Modifier
@@ -63,10 +64,14 @@ fun ConnectedScreen(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Status: Connected to " + (if (state.isTestDevice) "Test Device"  else state.deviceName),
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "Status: Connected to " + (if (state.isTestDevice) "Test Device"  else state.deviceName))
+                when {
+                    hasLimit -> {
+                        Text(text = "Limit: " + state.limitCoefficient.toString() + "E-" + state.limitExponent.toString())
+                    }
+                }
+            }
             IconButton(onClick = onDisconnect) {
                 Icon(
                     imageVector = Icons.Default.Close,
@@ -97,34 +102,35 @@ fun ConnectedScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             when {
-                isPolling -> {
-                    Button(onClick = onStopPolling, enabled = !state.isTestDevice) {
-                        Text(text = "Stop Polling")
-                    }
+                state.isSettingLimit -> {
+                    LimitInput(
+                        modifier = Modifier.fillMaxWidth(),
+                        hasLimit = hasLimit,
+                        onSetLimit = onSetLimit,
+                        onDeleteLimit = onDeleteLimit,
+                        onCloseLimitConfig = onCloseLimitConfig
+                    )
                 }
                 else -> {
-                    Button(onClick = if (state.isTestDevice) onLoadTestData else onStartPolling) {
-                        Text(text = if (state.isTestDevice) "Load Test Data" else "Start Polling")
+                    when {
+                        isPolling -> {
+                            Button(onClick = onStopPolling, enabled = !state.isTestDevice) {
+                                Text(text = "Stop Polling")
+                            }
+                        }
+                        else -> {
+                            Button(onClick = if (state.isTestDevice) onLoadTestData else onStartPolling) {
+                                Text(text = if (state.isTestDevice) "Load Test Data" else "Start Polling")
+                            }
+                        }
+                    }
+                    Button(onClick = onReset) {
+                        Text(text = "Reset")
+                    }
+                    Button(onClick = onOpenLimitConfig) {
+                        Text(text = "Set Limit")
                     }
                 }
-            }
-            when {
-                zeroActivated -> {
-                    Button(onClick = onDeactivateZeroClick) {
-                        Text(text = "Stop Zero")
-                    }
-                }
-                else -> {
-                    Button(onClick = onActivateZeroClick, enabled = isPolling) {
-                        Text(text = "Zero")
-                    }
-                }
-            }
-            Button(onClick = onReset) {
-                Text(text = "Reset")
-            }
-            Button(onClick = onAcknowledgeLeak, enabled = state.isLeaking) {
-                Text(text = if (state.isLeaking) "Leak Detected" else "No Leak")
             }
         }
     }

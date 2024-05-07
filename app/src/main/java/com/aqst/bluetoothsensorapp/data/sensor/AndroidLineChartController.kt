@@ -35,8 +35,10 @@ class AndroidLineChartController(
         chart.axisRight.isEnabled = false
         chart.description?.isEnabled = false
         chart.legend?.isEnabled = false
-        chart.setTouchEnabled(true)
         chart.contentDescription = null
+        chart.setTouchEnabled(false)
+        chart.setPinchZoom(false)
+        chart.isDragEnabled = false
     }
 
     override fun setRange(min: Float, max: Float) {
@@ -44,6 +46,10 @@ class AndroidLineChartController(
         val yAxis = chart.axisLeft
         yAxis.axisMinimum = min
         yAxis.axisMaximum = max
+        chart.setTouchEnabled(false)
+        chart.setPinchZoom(false)
+        chart.isDragEnabled = false
+        chart.invalidate()
     }
 
     override fun drawData(data: List<Entry>) {

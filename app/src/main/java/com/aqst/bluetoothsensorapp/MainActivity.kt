@@ -117,10 +117,11 @@ class MainActivity: ComponentActivity() {
                                 onDisconnect = viewModel::disconnectFromDevice,
                                 onStartPolling = viewModel::startPolling,
                                 onStopPolling = viewModel::stopPolling,
-                                onActivateZeroClick = viewModel::activateZero,
-                                onDeactivateZeroClick = viewModel::deactivateZero,
+                                onOpenLimitConfig = viewModel::openLimitConfig,
+                                onDeleteLimit = viewModel::deleteLimit,
+                                onSetLimit = viewModel::setLimit,
+                                onCloseLimitConfig = viewModel::closeLimitConfig,
                                 onReset = viewModel::reset,
-                                onAcknowledgeLeak = viewModel::acknowledgeLeak,
                                 onLoadTestData = viewModel::loadTestData
                             )
                         }
