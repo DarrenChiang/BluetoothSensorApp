@@ -297,6 +297,28 @@ class BluetoothViewModel @Inject constructor(
         _state.update { it.copy(isSettingLimit = true) }
     }
 
+    fun setLeakDetectionConfig(baselineSlope: Float, limitCoefficient: Float, limitExponent: Int) {
+        _state.update {
+            it.copy(
+                isSettingLimit = false,
+                baselineSlope = baselineSlope,
+                limitCoefficient = limitCoefficient,
+                limitExponent = limitExponent
+            )
+        }
+    }
+
+    fun resetLeakDetectionConfig() {
+        _state.update {
+            it.copy(
+                isSettingLimit = false,
+                baselineSlope = null,
+                limitCoefficient = null,
+                limitExponent = null
+            )
+        }
+    }
+
     fun deleteLimit() {
         lineChartController.setLimit(null, null)
 

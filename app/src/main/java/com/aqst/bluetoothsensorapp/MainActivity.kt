@@ -118,8 +118,8 @@ class MainActivity: ComponentActivity() {
                                 onStartPolling = viewModel::startPolling,
                                 onStopPolling = viewModel::stopPolling,
                                 onOpenLimitConfig = viewModel::openLimitConfig,
-                                onDeleteLimit = viewModel::deleteLimit,
-                                onSetLimit = viewModel::setLimit,
+                                onSetLeakDetectionConfig = viewModel::setLeakDetectionConfig,
+                                onResetLeakDetectionConfig = viewModel::resetLeakDetectionConfig,
                                 onCloseLimitConfig = viewModel::closeLimitConfig,
                                 onReset = viewModel::reset,
                                 onLoadTestData = viewModel::loadTestData

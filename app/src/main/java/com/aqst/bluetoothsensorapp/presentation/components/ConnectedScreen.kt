@@ -45,8 +45,8 @@ fun ConnectedScreen(
     onStartPolling: () -> Unit,
     onStopPolling: () -> Unit,
     onOpenLimitConfig: () -> Unit,
-    onDeleteLimit: () -> Unit,
-    onSetLimit: (Float, Int) -> Unit,
+    onSetLeakDetectionConfig: (Float, Float, Int) -> Unit,
+    onResetLeakDetectionConfig: () -> Unit,
     onCloseLimitConfig: () -> Unit,
     onReset: () -> Unit,
     onLoadTestData: () -> Unit
@@ -54,6 +54,10 @@ fun ConnectedScreen(
     val isPolling = state.pollingInterval !== null
     val hasLimit = state.limitCoefficient !== null && state.limitExponent !== null
     val limitExpSign = if (state.limitExponent !== null && state.limitExponent >= 0) "+" else ""
+    val limitConfigString = "Limit: " +
+        state.limitCoefficient.toString() +
+        "E" + limitExpSign + state.limitExponent.toString() +
+        ", Baseline: " + state.baselineSlope.toString()
 
     Column(
         modifier = Modifier
@@ -61,6 +65,7 @@ fun ConnectedScreen(
     ) {
         Row(
             modifier = Modifier
+                .weight(0.1f)
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -69,7 +74,7 @@ fun ConnectedScreen(
                 Text(text = "Status: Connected to " + (if (state.isTestDevice) "Test Device"  else state.deviceName))
                 when {
                     hasLimit -> {
-                        Text(text = "Limit: " + state.limitCoefficient.toString() + "E" + limitExpSign + state.limitExponent.toString())
+                        Text(text = limitConfigString)
                     }
                 }
             }
@@ -82,8 +87,8 @@ fun ConnectedScreen(
         }
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
+                .weight(if (state.isSettingLimit) 0.6f else 0.7f)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -98,6 +103,7 @@ fun ConnectedScreen(
         }
         Row(
             modifier = Modifier
+                .weight(if (state.isSettingLimit) 0.3f else 0.2f)
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -107,8 +113,8 @@ fun ConnectedScreen(
                     LimitInput(
                         modifier = Modifier.fillMaxWidth(),
                         hasLimit = hasLimit,
-                        onSetLimit = onSetLimit,
-                        onDeleteLimit = onDeleteLimit,
+                        onSetLeakDetectionConfig = onSetLeakDetectionConfig,
+                        onResetLeakDetectionConfig = onResetLeakDetectionConfig,
                         onCloseLimitConfig = onCloseLimitConfig
                     )
                 }

@@ -28,6 +28,7 @@ data class BluetoothUiState(
     val isSettingLimit: Boolean = false,
     val limitCoefficient: Float? = null,
     val limitExponent: Int? = null,
+    val baselineSlope: Float? = null,
     val isTestDevice: Boolean = false,
     val testData: List<DataPoint> = emptyList(),
     val testDataInterval: Timer? = null,
