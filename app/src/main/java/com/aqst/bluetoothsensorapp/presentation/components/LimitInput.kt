@@ -7,15 +7,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
-import com.aqst.bluetoothsensorapp.presentation.BluetoothUiState
 
 fun isValidCoefficient(value: String): Boolean {
     return value.toFloatOrNull() !== null
@@ -23,6 +19,22 @@ fun isValidCoefficient(value: String): Boolean {
 
 fun isValidExponent(value: String): Boolean {
     return value.toIntOrNull() !== null
+}
+
+fun handleMinus(input: String): String {
+    if (input.length > 1) {
+        var sub = input.substring(1).replace("-", "")
+
+        if (sub.isEmpty() && input[0] == '-') {
+            return "0"
+        }
+
+        return input[0] + sub
+    } else if (input == "-") {
+        return "0"
+    }
+
+    return input
 }
 
 fun trimForFloat(input: String): String {
@@ -60,7 +72,7 @@ fun trimForInteger(input: String): String {
         trimmedInput = trimmedInput.trim('0')
     }
 
-    return if (trimmedInput.isEmpty()) "0" else trimmedInput
+    return trimmedInput.ifEmpty { "0" }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,36 +95,52 @@ fun LimitInput(
         OutlinedTextField(
             value = coefficient,
             onValueChange = {
-                if (isValidCoefficient(it) || it.length === 0) {
+                if (isValidCoefficient(it) || it.length === 0 || it == "-") {
                     coefficient = it
                 }
             },
             label = { Text("Coefficient") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Decimal
+            ),
             visualTransformation = VisualTransformation.None,
             modifier = Modifier
                 .weight(1f)
                 .onFocusChanged {
                     if (!it.isFocused) {
-                        coefficient = trimForFloat(coefficient)
+                        coefficient = handleMinus(coefficient)
+
+                        coefficient = if (coefficient.isNotEmpty() && coefficient[0] == '-') {
+                            "-" + trimForFloat(coefficient.substring(1))
+                        } else {
+                            trimForFloat(coefficient)
+                        }
                     }
                 }
         )
         OutlinedTextField(
             value = exponent,
             onValueChange = {
-                if (isValidExponent(it) || it.length === 0) {
+                if (isValidExponent(it) || it.length === 0 || it == "-") {
                     exponent = it
                 }
             },
             label = { Text("Exponent") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Decimal
+            ),
             visualTransformation = VisualTransformation.None,
             modifier = Modifier
                 .weight(1f)
                 .onFocusChanged {
                     if (!it.isFocused) {
-                        exponent = trimForInteger(exponent)
+                        exponent = handleMinus(exponent)
+
+                        exponent = if (exponent.isNotEmpty() && exponent[0] == '-') {
+                            "-" + trimForInteger(exponent.substring(1))
+                        } else {
+                            trimForInteger(exponent)
+                        }
                     }
                 }
         )

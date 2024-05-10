@@ -12,4 +12,6 @@ interface LineChartController {
     fun setRange(min: Float, max: Float)
 
     fun drawData(data: List<Entry>)
+
+    fun setLimit(coefficient: Float?, exponent: Int?)
 }

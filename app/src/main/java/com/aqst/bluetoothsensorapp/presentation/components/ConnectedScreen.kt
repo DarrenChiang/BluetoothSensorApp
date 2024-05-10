@@ -53,6 +53,7 @@ fun ConnectedScreen(
 ) {
     val isPolling = state.pollingInterval !== null
     val hasLimit = state.limitCoefficient !== null && state.limitExponent !== null
+    val limitExpSign = if (state.limitExponent !== null && state.limitExponent >= 0) "+" else ""
 
     Column(
         modifier = Modifier
@@ -68,7 +69,7 @@ fun ConnectedScreen(
                 Text(text = "Status: Connected to " + (if (state.isTestDevice) "Test Device"  else state.deviceName))
                 when {
                     hasLimit -> {
-                        Text(text = "Limit: " + state.limitCoefficient.toString() + "E-" + state.limitExponent.toString())
+                        Text(text = "Limit: " + state.limitCoefficient.toString() + "E" + limitExpSign + state.limitExponent.toString())
                     }
                 }
             }

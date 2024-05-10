@@ -298,6 +298,8 @@ class BluetoothViewModel @Inject constructor(
     }
 
     fun deleteLimit() {
+        lineChartController.setLimit(null, null)
+
         _state.update {
             it.copy(
                 isSettingLimit = false,
@@ -308,6 +310,8 @@ class BluetoothViewModel @Inject constructor(
     }
 
     fun setLimit(coefficient: Float, exponent: Int) {
+        lineChartController.setLimit(coefficient, exponent)
+
         _state.update {
             it.copy(
                 isSettingLimit = false,
@@ -323,12 +327,16 @@ class BluetoothViewModel @Inject constructor(
 
     fun reset() {
         stopPolling()
+        lineChartController.drawData(emptyList())
+        lineChartController.setLimit(null, null)
 
         _state.update {
             it.copy(
                 pollingData = emptyList(),
                 chartData = emptyList(),
-                zeroValue = null
+                zeroValue = null,
+                limitCoefficient = null,
+                limitExponent = null
             )
         }
     }

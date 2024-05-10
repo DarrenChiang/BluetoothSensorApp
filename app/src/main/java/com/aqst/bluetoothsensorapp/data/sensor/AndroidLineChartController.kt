@@ -16,6 +16,9 @@ class AndroidLineChartController(
 ): LineChartController{
     override val chart = LineChart(context)
 
+    private var _data: List<Entry> = emptyList()
+    private var _limit: Float? = null
+
     override fun configure() {
         // Customize X-axis
         val xAxis = chart.xAxis
@@ -28,7 +31,7 @@ class AndroidLineChartController(
         yAxis.valueFormatter = object : ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
                 if (value.compareTo(0) == 0) return "0"
-                return String.format("%.2e", 10.0.pow(value.toDouble()))
+                return String.format("%.2e", value)
             }
         }
 
@@ -52,15 +55,45 @@ class AndroidLineChartController(
         chart.invalidate()
     }
 
-    override fun drawData(data: List<Entry>) {
-        val lineDataSet = LineDataSet(data, "Sensor Data")
-        lineDataSet.color = Color.RED
+    private fun draw() {
+        val lineDataSet = LineDataSet(_data, "Sensor Data")
+        lineDataSet.color = Color.BLUE
         lineDataSet.valueTextColor = 2
         lineDataSet.mode = LineDataSet.Mode.LINEAR
         lineDataSet.setDrawValues(true)
         lineDataSet.lineWidth = 2.0f
         val lineData = LineData(lineDataSet)
+
+
+        if (_limit !== null && _data.size > 1) {
+            val entries = mutableListOf<Entry>()
+            entries.add(Entry(_data.first().x, _limit!!))
+            entries.add(Entry(_data.last().x, _limit!!))
+            val limitSet = LineDataSet(entries, "Horizontal Line")
+            limitSet.color = Color.RED
+            limitSet.valueTextColor = 2
+            limitSet.mode = LineDataSet.Mode.LINEAR
+            limitSet.setDrawValues(true)
+            limitSet.lineWidth = 2.0f
+            lineData.addDataSet(limitSet)
+        }
+
         chart.data = lineData
         chart.invalidate()
+    }
+
+    override fun drawData(data: List<Entry>) {
+        _data = data
+        draw()
+    }
+
+    override fun setLimit(coefficient: Float?, exponent: Int?) {
+        if (coefficient !== null && exponent !== null) {
+            _limit = coefficient * 10.0.pow(exponent.toDouble()).toFloat()
+        } else {
+            _limit = null
+        }
+
+        draw()
     }
 }
