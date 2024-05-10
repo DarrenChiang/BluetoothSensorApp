@@ -88,10 +88,10 @@ class AndroidLineChartController(
     }
 
     override fun setLimit(coefficient: Float?, exponent: Int?) {
-        if (coefficient !== null && exponent !== null) {
-            _limit = coefficient * 10.0.pow(exponent.toDouble()).toFloat()
+        _limit = if (coefficient !== null && exponent !== null) {
+            coefficient * 10.0.pow(exponent.toDouble()).toFloat()
         } else {
-            _limit = null
+            null
         }
 
         draw()

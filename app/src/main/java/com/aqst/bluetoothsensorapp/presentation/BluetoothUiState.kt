@@ -23,7 +23,6 @@ data class BluetoothUiState(
     val chartMinQueue: List<Entry> = emptyList(),
     val pollingInterval: Timer? = null,
     val drawInterval: Timer? = null,
-    val zeroValue: Float? = null,
     val isLeaking: Boolean = false,
     val isSettingLimit: Boolean = false,
     val limitCoefficient: Float? = null,

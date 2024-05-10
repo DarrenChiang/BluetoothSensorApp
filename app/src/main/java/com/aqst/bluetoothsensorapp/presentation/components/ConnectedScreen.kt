@@ -1,5 +1,6 @@
 package com.aqst.bluetoothsensorapp.presentation.components
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import com.aqst.bluetoothsensorapp.presentation.BluetoothUiState
@@ -92,7 +94,7 @@ fun ConnectedScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Leak Rate (PPM)",
+                text = "PPM",
                 modifier = Modifier.rotateVertically(clockwise = false)
             )
             ChartDisplay(
@@ -101,43 +103,57 @@ fun ConnectedScreen(
                     .fillMaxSize()
             )
         }
-        Row(
+        Column(
             modifier = Modifier
                 .weight(if (state.isSettingLimit) 0.3f else 0.2f)
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            when {
-                state.isSettingLimit -> {
-                    LimitInput(
-                        modifier = Modifier.fillMaxWidth(),
-                        hasLimit = hasLimit,
-                        onSetLeakDetectionConfig = onSetLeakDetectionConfig,
-                        onResetLeakDetectionConfig = onResetLeakDetectionConfig,
-                        onCloseLimitConfig = onCloseLimitConfig
-                    )
-                }
-                else -> {
-                    when {
-                        isPolling -> {
-                            Button(onClick = onStopPolling, enabled = !state.isTestDevice) {
-                                Text(text = "Stop Polling")
+            horizontalAlignment = Alignment.CenterHorizontally
+        ){
+            Row(
+                modifier = Modifier
+                    .weight(if (hasLimit && !state.isSettingLimit) 0.5f else 1f)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                when {
+                    state.isSettingLimit -> {
+                        LimitInput(
+                            modifier = Modifier.fillMaxWidth(),
+                            hasLimit = hasLimit,
+                            onSetLeakDetectionConfig = onSetLeakDetectionConfig,
+                            onResetLeakDetectionConfig = onResetLeakDetectionConfig,
+                            onCloseLimitConfig = onCloseLimitConfig
+                        )
+                    }
+                    else -> {
+                        when {
+                            isPolling -> {
+                                Button(onClick = onStopPolling, enabled = !state.isTestDevice) {
+                                    Text(text = "Stop Polling")
+                                }
+                            }
+                            else -> {
+                                Button(onClick = if (state.isTestDevice) onLoadTestData else onStartPolling) {
+                                    Text(text = if (state.isTestDevice) "Load Test Data" else "Start Polling")
+                                }
                             }
                         }
-                        else -> {
-                            Button(onClick = if (state.isTestDevice) onLoadTestData else onStartPolling) {
-                                Text(text = if (state.isTestDevice) "Load Test Data" else "Start Polling")
-                            }
+                        Button(onClick = onReset) {
+                            Text(text = "Reset")
+                        }
+                        Button(onClick = onOpenLimitConfig) {
+                            Text(text = "Set Limit")
                         }
                     }
-                    Button(onClick = onReset) {
-                        Text(text = "Reset")
-                    }
-                    Button(onClick = onOpenLimitConfig) {
-                        Text(text = "Set Limit")
-                    }
                 }
+            }
+            if (hasLimit && !state.isSettingLimit) {
+                Text(
+                    text = if (state.isLeaking) "Leak Detected" else "No Leak",
+                    color = if (state.isLeaking) Color.Red else Color.Black
+                )
             }
         }
     }

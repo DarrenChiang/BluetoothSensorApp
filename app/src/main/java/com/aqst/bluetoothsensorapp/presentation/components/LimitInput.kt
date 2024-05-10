@@ -24,58 +24,14 @@ fun isValidInt(value: String): Boolean {
     return value.toIntOrNull() !== null
 }
 
-fun handleMinus(input: String): String {
-    if (input.length > 1) {
-        var sub = input.substring(1).replace("-", "")
-
-        if (sub.isEmpty() && input[0] == '-') {
-            return "0"
-        }
-
-        return input[0] + sub
-    } else if (input == "-") {
-        return "0"
-    }
-
-    return input
-}
-
 fun trimForFloat(input: String): String {
-    var trimmedInput = input.trim('0') // Initial trim of leading zeroes
-
-    // If the string starts or ends with a dot, we add a leading or trailing zero to prevent loss of decimal point
-    if (trimmedInput.startsWith('.')) {
-        trimmedInput = "0$trimmedInput"
-    }
-    if (trimmedInput.endsWith('.')) {
-        trimmedInput += '0'
-    }
-
-    // Repeat trimming until the condition is no longer met
-    while (trimmedInput.length > 1 && (trimmedInput.first() == '0' || trimmedInput.first() == '.' || trimmedInput.last() == '.')) {
-        trimmedInput = trimmedInput.trim('0', '.')
-
-        // If the string starts or ends with a dot, we add a leading or trailing zero to prevent loss of decimal point
-        if (trimmedInput.startsWith('.')) {
-            trimmedInput = "0$trimmedInput"
-        }
-        if (trimmedInput.endsWith('.')) {
-            trimmedInput += '0'
-        }
-    }
-
-    return trimmedInput
+    val floatValue = input.toFloatOrNull() ?: return "0.0" // Convert to float, return original string if conversion fails
+    return floatValue.toString()
 }
 
 fun trimForInteger(input: String): String {
-    var trimmedInput = input.trim('0') // Initial trim of leading zeroes
-
-    // Repeat trimming until the condition is no longer met
-    while (trimmedInput.length > 1 && trimmedInput.first() == '0') {
-        trimmedInput = trimmedInput.trim('0')
-    }
-
-    return trimmedInput.ifEmpty { "0" }
+    val intValue = input.toIntOrNull() ?: return "0" // Convert to int, return original string if conversion fails
+    return intValue.toString()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -132,13 +88,7 @@ fun LimitInput(
                         .weight(1f)
                         .onFocusChanged {
                             if (!it.isFocused) {
-                                coefficient = handleMinus(coefficient)
-
-                                coefficient = if (coefficient.isNotEmpty() && coefficient[0] == '-') {
-                                    "-" + trimForFloat(coefficient.substring(1))
-                                } else {
-                                    trimForFloat(coefficient)
-                                }
+                                coefficient = trimForFloat(coefficient)
                             }
                         }
                 )
@@ -163,13 +113,7 @@ fun LimitInput(
                         .weight(1f)
                         .onFocusChanged {
                             if (!it.isFocused) {
-                                exponent = handleMinus(exponent)
-
-                                exponent = if (exponent.isNotEmpty() && exponent[0] == '-') {
-                                    "-" + trimForInteger(exponent.substring(1))
-                                } else {
-                                    trimForInteger(exponent)
-                                }
+                                exponent = trimForInteger(exponent)
                             }
                         }
                 )
@@ -203,13 +147,7 @@ fun LimitInput(
                         .weight(1f)
                         .onFocusChanged {
                             if (!it.isFocused) {
-                                slope = handleMinus(slope)
-
-                                slope = if (slope.isNotEmpty() && slope[0] == '-') {
-                                    "-" + trimForFloat(slope.substring(1))
-                                } else {
-                                    trimForFloat(slope)
-                                }
+                                slope = trimForFloat(slope)
                             }
                         }
                 )

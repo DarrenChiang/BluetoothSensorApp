@@ -1,5 +1,6 @@
 package com.aqst.bluetoothsensorapp.presentation
 
+import android.R.attr
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aqst.bluetoothsensorapp.data.sensor.FileReader
@@ -26,7 +27,8 @@ import java.math.BigDecimal
 import java.util.Timer
 import java.util.TimerTask
 import javax.inject.Inject
-import kotlin.math.log10
+import kotlin.math.pow
+
 
 @HiltViewModel
 class BluetoothViewModel @Inject constructor(
@@ -318,29 +320,40 @@ class BluetoothViewModel @Inject constructor(
             )
         }
     }
+    fun calculateSlope(data: List<Entry>): Float {
+        val n: Int = data.size
+        var xSum = 0.0f
+        var ySum = 0.0f
+        var xySum = 0.0f
+        var xSquaredSum = 0.0f
 
-    fun deleteLimit() {
-        lineChartController.setLimit(null, null)
-
-        _state.update {
-            it.copy(
-                isSettingLimit = false,
-                limitCoefficient = null,
-                limitExponent = null
-            )
+        for (i in 0 until n) {
+            val x = i.toFloat()
+            val y: Float = data[i].y
+            xSum += x
+            ySum += y
+            xySum += x * y
+            xSquaredSum += x * x
         }
+
+        val numerator = n * xySum - xSum * ySum
+        val denominator = n * xSquaredSum - xSum * xSum
+
+        return numerator / denominator
     }
 
-    fun setLimit(coefficient: Float, exponent: Int) {
-        lineChartController.setLimit(coefficient, exponent)
-
-        _state.update {
-            it.copy(
-                isSettingLimit = false,
-                limitCoefficient = coefficient,
-                limitExponent = exponent
-            )
+    fun detectLeak(value: Float): Boolean {
+        if (
+            _state.value.baselineSlope == null ||
+            _state.value.limitCoefficient == null ||
+            _state.value.limitExponent == null
+        ) {
+            return false
         }
+
+        val result = _state.value.baselineSlope!! * 10.0.pow(12).toFloat() / value
+        val limit = _state.value.limitCoefficient!! * 10.0.pow(_state.value.limitExponent!!.toDouble()).toFloat()
+        return result > limit
     }
 
     fun closeLimitConfig() {
@@ -356,19 +369,10 @@ class BluetoothViewModel @Inject constructor(
             it.copy(
                 pollingData = emptyList(),
                 chartData = emptyList(),
-                zeroValue = null,
                 limitCoefficient = null,
                 limitExponent = null
             )
         }
-    }
-
-    private fun detectLeak(newData: Entry, data: List<Entry>): Boolean {
-        if (newData.y > data.last().y) {
-            return true
-        }
-
-        return false
     }
 
     private fun manageQueue(newValue: Entry, queue: List<Entry>, orderFunction: (Entry, Entry) -> Boolean): List<Entry> {
@@ -423,21 +427,7 @@ class BluetoothViewModel @Inject constructor(
 
             var yValue: Float = newPollingValue
 
-            if (it.zeroValue !== null && it.zeroValue >= yValue) {
-                yValue = 0.toFloat()
-            }
-
-            if (yValue > 0) {
-                yValue = log10(yValue)
-            }
-
             val entry = Entry(xValue, yValue)
-
-            var isLeaking = it.isLeaking
-
-            if (it.zeroValue !== null && !isLeaking) {
-                isLeaking = detectLeak(entry, it.chartData)
-            }
 
             var tempMaxQueue = it.chartMaxQueue
             var tempMinQueue = it.chartMinQueue
@@ -465,6 +455,22 @@ class BluetoothViewModel @Inject constructor(
             val rangeMin: Float = chartMinQueue[0].y * 0.9f
 
             lineChartController.setRange(rangeMin, rangeMax)
+
+            var isLeaking = false
+
+            if (it.baselineSlope !== null && it.limitCoefficient !== null && it.limitExponent !== null) {
+                val windowSize = 3
+
+                if (chartData.size >= windowSize) {
+                    val dataWindow = chartData.takeLast(windowSize)
+
+                    if (calculateSlope(dataWindow) <= it.baselineSlope) {
+                        if (detectLeak(yValue)) {
+                            isLeaking = true
+                        }
+                    }
+                }
+            }
 
             it.copy(
                 lastCommand = null,
