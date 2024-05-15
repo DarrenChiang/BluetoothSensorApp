@@ -27,6 +27,7 @@ import java.math.BigDecimal
 import java.util.Timer
 import java.util.TimerTask
 import javax.inject.Inject
+import kotlin.math.absoluteValue
 import kotlin.math.pow
 
 
@@ -342,18 +343,16 @@ class BluetoothViewModel @Inject constructor(
         return numerator / denominator
     }
 
-    fun detectLeak(value: Float): Boolean {
+    fun calculateLeakRate(value: Float): Float? {
         if (
             _state.value.baselineSlope == null ||
             _state.value.limitCoefficient == null ||
             _state.value.limitExponent == null
         ) {
-            return false
+            return null
         }
 
-        val result = _state.value.baselineSlope!! * 10.0.pow(12).toFloat() / value
-        val limit = _state.value.limitCoefficient!! * 10.0.pow(_state.value.limitExponent!!.toDouble()).toFloat()
-        return result > limit
+        return _state.value.baselineSlope!! * 10.0.pow(12).toFloat() / value
     }
 
     fun closeLimitConfig() {
@@ -456,18 +455,18 @@ class BluetoothViewModel @Inject constructor(
 
             lineChartController.setRange(rangeMin, rangeMax)
 
-            var isLeaking = false
+            var calculatedSlope: Float? = null
+            var calculatedLeakRate: Float? = null
 
             if (it.baselineSlope !== null && it.limitCoefficient !== null && it.limitExponent !== null) {
-                val windowSize = 3
+                val windowSize = 13
 
                 if (chartData.size >= windowSize) {
                     val dataWindow = chartData.takeLast(windowSize)
+                    calculatedSlope = calculateSlope(dataWindow).absoluteValue
 
-                    if (calculateSlope(dataWindow) <= it.baselineSlope) {
-                        if (detectLeak(yValue)) {
-                            isLeaking = true
-                        }
+                    if (calculatedSlope <= it.baselineSlope) {
+                        calculatedLeakRate = calculateLeakRate(yValue)
                     }
                 }
             }
@@ -478,7 +477,8 @@ class BluetoothViewModel @Inject constructor(
                 chartData = chartData,
                 chartMaxQueue = chartMaxQueue,
                 chartMinQueue = chartMinQueue,
-                isLeaking = isLeaking
+                calculatedSlope = calculatedSlope,
+                calculatedLeakRate = calculatedLeakRate
             )
         }
     }

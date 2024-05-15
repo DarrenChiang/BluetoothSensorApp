@@ -57,15 +57,14 @@ fun LimitInput(
         )
     }
 
-    Row(modifier = modifier) {
+    Column(modifier = modifier) {
         Column(modifier = Modifier.weight(0.6f)) {
             Row(
                 modifier = Modifier.weight(0.5f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Limit:",
-                    fontSize = 10.sp
+                    text = "Limit:"
                 )
                 OutlinedTextField(
                     value = coefficient,
@@ -91,6 +90,9 @@ fun LimitInput(
                                 coefficient = trimForFloat(coefficient)
                             }
                         }
+                )
+                Text(
+                    text = "E"
                 )
                 OutlinedTextField(
                     value = exponent,
@@ -123,8 +125,7 @@ fun LimitInput(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Baseline:",
-                    fontSize = 10.sp
+                    text = "Baseline:"
                 )
                 OutlinedTextField(
                     value = slope,
@@ -132,12 +133,6 @@ fun LimitInput(
                         if (isValidFloat(it) || it.length === 0 || it == "-") {
                             slope = it
                         }
-                    },
-                    label = {
-                        Text(
-                            text = "Slope",
-                            fontSize = 10.sp
-                        )
                     },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Decimal
@@ -154,9 +149,9 @@ fun LimitInput(
             }
         }
 
-        Column(
+        Row(
             modifier = Modifier.weight(0.4f),
-            horizontalAlignment = Alignment.CenterHorizontally
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Button(
                 modifier = Modifier
