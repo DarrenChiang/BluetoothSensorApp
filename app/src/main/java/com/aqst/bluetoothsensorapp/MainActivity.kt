@@ -117,11 +117,11 @@ class MainActivity: ComponentActivity() {
                                 onDisconnect = viewModel::disconnectFromDevice,
                                 onStartPolling = viewModel::startPolling,
                                 onStopPolling = viewModel::stopPolling,
-                                onActivateZeroClick = viewModel::activateZero,
-                                onDeactivateZeroClick = viewModel::deactivateZero,
-                                onReset = viewModel::reset,
-                                onAcknowledgeLeak = viewModel::acknowledgeLeak,
-                                onLoadTestData = viewModel::loadTestData
+                                onLoadTestData = viewModel::loadTestData,
+                                onValidateLeakRateConfiguration = viewModel::validateLeakRateConfiguration,
+                                onOpenLeakRateConfiguration = viewModel::openLeakRateConfigurationScreen,
+                                onCancelLeakRateConfiguration = viewModel::closeLeakRateConfigurationScreen,
+                                onSaveLeakRateConfiguration = viewModel::setLeakRateConfiguration
                             )
                         }
                         else -> {
