@@ -1,6 +1,7 @@
 package com.aqst.bluetoothsensorapp.presentation
 
-import android.R.attr
+import android.util.Log
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aqst.bluetoothsensorapp.data.sensor.FileReader
@@ -9,6 +10,7 @@ import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothDeviceDomain
 import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothMessage
 import com.aqst.bluetoothsensorapp.domain.sensor.ConnectionResult
 import com.aqst.bluetoothsensorapp.domain.sensor.DataPoint
+import com.aqst.bluetoothsensorapp.domain.sensor.LeakRateConfigState
 import com.aqst.bluetoothsensorapp.domain.sensor.LineChartController
 import com.github.mikephil.charting.data.Entry
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,6 +30,7 @@ import java.util.Timer
 import java.util.TimerTask
 import javax.inject.Inject
 import kotlin.math.absoluteValue
+import kotlin.math.log10
 import kotlin.math.pow
 
 
@@ -68,7 +71,7 @@ class BluetoothViewModel @Inject constructor(
                 lineChartController.configure()
                 lineChartController.drawData(emptyList())
 
-                val delay = 1000.toLong()
+                val delay = 300.toLong()
                 val timer = Timer()
 
                 val timerTask = object : TimerTask() {
@@ -117,9 +120,15 @@ class BluetoothViewModel @Inject constructor(
                 isConnecting = false,
                 drawInterval = null,
                 pollingInterval = null,
-                isSettingLimit = false,
+                rawData = emptyList(),
+                sgfData = emptyList(),
+                chartData = emptyList(),
                 isTestDevice = false,
-                testDataInterval = null
+                testData = emptyList(),
+                testDataIndex = 0,
+                leakRate = 1e-12f,
+                baseLeakRate = 0f,
+                leakRateColor = Color.Transparent
             )
         }
     }
@@ -129,7 +138,6 @@ class BluetoothViewModel @Inject constructor(
         bluetoothController.closeConnection()
         _state.value.drawInterval?.cancel()
         _state.value.pollingInterval?.cancel()
-        _state.value.testDataInterval?.cancel()
         returnToDeviceScreen()
     }
 
@@ -216,27 +224,27 @@ class BluetoothViewModel @Inject constructor(
         }
     }
 
-    private fun hexStrToInt(hexStr: String): Int {
-        return Integer.decode("0x$hexStr")
-    }
+//    private fun hexStrToInt(hexStr: String): Int {
+//        return Integer.decode("0x$hexStr")
+//    }
 
     private fun handleG(message: String) {
         if (message.length < 6) return
         val content = if (message[0] == 'g') message.substring(1) else message
         val data: List<String> = content.split(',')
         if (data.size < 6) return
-        val byte1: Int = hexStrToInt(data[0])
-        val byte2: Int = hexStrToInt(data[1])
-        val byte3: Int = hexStrToInt(data[2])
-        val byte4: Int = hexStrToInt(data[3])
-        val byte5: Int = hexStrToInt(data[4])
-        val byte6: Int = hexStrToInt(data[5])
-
-        val parsedMessage = BluetoothMessage(
-            message = "b1: $byte1, b2: $byte2, b3: $byte3, b4: $byte4, b5: $byte5, b6: $byte6",
-            senderName = "Device",
-            isFromLocalUser = false
-        )
+//        val byte1: Int = hexStrToInt(data[0])
+//        val byte2: Int = hexStrToInt(data[1])
+//        val byte3: Int = hexStrToInt(data[2])
+//        val byte4: Int = hexStrToInt(data[3])
+//        val byte5: Int = hexStrToInt(data[4])
+//        val byte6: Int = hexStrToInt(data[5])
+//
+//        val parsedMessage = BluetoothMessage(
+//            message = "b1: $byte1, b2: $byte2, b3: $byte3, b4: $byte4, b5: $byte5, b6: $byte6",
+//            senderName = "Device",
+//            isFromLocalUser = false
+//        )
 
         _state.update {
             it.copy(
@@ -272,7 +280,7 @@ class BluetoothViewModel @Inject constructor(
 
     fun startPolling() {
         if (_state.value.pollingInterval == null) {
-            val delay = 100.toLong()
+            val delay = 300.toLong()
             val timer = Timer()
 
             val timerTask = object : TimerTask() {
@@ -296,32 +304,8 @@ class BluetoothViewModel @Inject constructor(
         _state.value.pollingInterval?.cancel()
         _state.update { it.copy(pollingInterval = null) }
     }
-    fun openLimitConfig() {
-        _state.update { it.copy(isSettingLimit = true) }
-    }
 
-    fun setLeakDetectionConfig(baselineSlope: Float, limitCoefficient: Float, limitExponent: Int) {
-        _state.update {
-            it.copy(
-                isSettingLimit = false,
-                baselineSlope = baselineSlope,
-                limitCoefficient = limitCoefficient,
-                limitExponent = limitExponent
-            )
-        }
-    }
-
-    fun resetLeakDetectionConfig() {
-        _state.update {
-            it.copy(
-                isSettingLimit = false,
-                baselineSlope = null,
-                limitCoefficient = null,
-                limitExponent = null
-            )
-        }
-    }
-    fun calculateSlope(data: List<Entry>): Float {
+    private fun calculateSlope(data: List<Entry>): Float {
         val n: Int = data.size
         var xSum = 0.0f
         var ySum = 0.0f
@@ -343,36 +327,6 @@ class BluetoothViewModel @Inject constructor(
         return numerator / denominator
     }
 
-    fun calculateLeakRate(value: Float): Float? {
-        if (
-            _state.value.baselineSlope == null ||
-            _state.value.limitCoefficient == null ||
-            _state.value.limitExponent == null
-        ) {
-            return null
-        }
-
-        return _state.value.baselineSlope!! * 10.0.pow(12).toFloat() / value
-    }
-
-    fun closeLimitConfig() {
-        _state.update { it.copy(isSettingLimit = false) }
-    }
-
-    fun reset() {
-        stopPolling()
-        lineChartController.drawData(emptyList())
-        lineChartController.setLimit(null, null)
-
-        _state.update {
-            it.copy(
-                pollingData = emptyList(),
-                chartData = emptyList(),
-                limitCoefficient = null,
-                limitExponent = null
-            )
-        }
-    }
 
     private fun manageQueue(newValue: Entry, queue: List<Entry>, orderFunction: (Entry, Entry) -> Boolean): List<Entry> {
         if (queue.isEmpty()) {
@@ -394,98 +348,135 @@ class BluetoothViewModel @Inject constructor(
         }
     }
 
+    private fun shouldActivateLeakMode(ppm: Float, slope: Float, config: LeakRateConfigState): Boolean {
+        return ppm <= config.leakRateTestStart && slope * config.slopeFactor <= config.pumpingStabilityRate
+    }
+
+    private fun calculateLeakRate(value: Float): Float {
+        return 10.0.pow(-11).toFloat() / value
+    }
+
+    private fun calculateColorValue(leakRate: Float, baseLeakRate: Float, config: LeakRateConfigState): Float {
+        var colorValue = 255 * config.leakRateColorSensitivity * log10(leakRate / baseLeakRate)
+
+        if (colorValue > 255f) {
+            colorValue = 255f
+        }
+
+        if (colorValue < 0f) {
+            colorValue = 0f
+        }
+
+        return colorValue
+    }
+
     private fun addDataPoint(dataPoint: DataPoint) {
         _state.update {
-            val pollingData = if (it.pollingData.size >= 120) {
-                it.pollingData.drop(1) + dataPoint
+            val rawData = if (it.rawData.size >= 120) {
+                it.rawData.drop(1) + dataPoint
             } else {
-                it.pollingData + dataPoint
+                it.rawData + dataPoint
             }
 
-            val useGolayFilter = true
+            if (rawData.size >= 13) {
+                val filteredDataPoint = applyGolayFilter(rawData)
 
-            if (useGolayFilter && pollingData.size < 13) {
-                it.copy(
-                    lastCommand = null,
-                    pollingData = pollingData
-                )
-            }
-
-            val newPollingValue: Float = if (useGolayFilter) {
-                val filteredDataPoint = applyGolayFilter(pollingData)
-                filteredDataPoint.ppm.toFloat()
-            } else {
-                dataPoint.ppm.toFloat()
-            }
-
-            val xValue: Float = if (it.chartData.isNotEmpty()) {
-                it.chartData.last().x + 1
-            } else {
-                1.toFloat()
-            }
-
-            var yValue: Float = newPollingValue
-
-            val entry = Entry(xValue, yValue)
-
-            var tempMaxQueue = it.chartMaxQueue
-            var tempMinQueue = it.chartMinQueue
-
-            val chartData = if (it.chartData.size >= 120) {
-                val droppedData = it.chartData[0]
-
-                if (droppedData.y.equals(tempMaxQueue[0].y)) {
-                    tempMaxQueue = tempMaxQueue.drop(1)
+                val sgfData = if (it.sgfData.size >= 120) {
+                    it.sgfData.drop(1) + filteredDataPoint
+                } else {
+                    it.sgfData + filteredDataPoint
                 }
 
-                if (droppedData.y.equals(tempMinQueue[0].y)) {
-                    tempMinQueue = tempMinQueue.drop(1)
+                val xValue: Float = if (it.chartData.isNotEmpty()) {
+                    it.chartData.last().x + 1
+                } else {
+                    1.toFloat()
                 }
 
-                it.chartData.drop(1) + entry
-            } else {
-                it.chartData + entry
-            }
+                val yValue: Float = calculateLeakRate(dataPoint.ppm.toFloat())
+                val entry = Entry(xValue, yValue)
+                var tempMaxQueue = it.chartMaxQueue
+                var tempMinQueue = it.chartMinQueue
 
-            var chartMaxQueue = manageQueue(entry, tempMaxQueue) { a, b -> a.y > b.y }
-            var chartMinQueue = manageQueue(entry, tempMinQueue) { a, b -> a.y < b.y }
+                val chartData = if (it.chartData.size >= 120) {
+                    val droppedData = it.chartData[0]
 
-            val rangeMax: Float = chartMaxQueue[0].y * 1.1f
-            val rangeMin: Float = chartMinQueue[0].y * 0.9f
+                    if (droppedData.y.equals(tempMaxQueue[0].y)) {
+                        tempMaxQueue = tempMaxQueue.drop(1)
+                    }
 
-            lineChartController.setRange(rangeMin, rangeMax)
+                    if (droppedData.y.equals(tempMinQueue[0].y)) {
+                        tempMinQueue = tempMinQueue.drop(1)
+                    }
 
-            var calculatedSlope: Float? = null
-            var calculatedLeakRate: Float? = null
+                    it.chartData.drop(1) + entry
+                } else {
+                    it.chartData + entry
+                }
 
-            if (it.baselineSlope !== null && it.limitCoefficient !== null && it.limitExponent !== null) {
+                val chartMaxQueue = manageQueue(entry, tempMaxQueue) { a, b -> a.y > b.y }
+                val chartMinQueue = manageQueue(entry, tempMinQueue) { a, b -> a.y < b.y }
+                val rangeMax: Float = chartMaxQueue[0].y * 1.1f
+                val rangeMin: Float = chartMinQueue[0].y * 0.9f
+
+                lineChartController.setRange(rangeMin, rangeMax)
                 val windowSize = 13
+                var leakRate = 1e-12f
+                var baseLeakRate: Float = it.baseLeakRate
+                var leakRateColor = Color.Transparent
 
                 if (chartData.size >= windowSize) {
+                    val ppm = dataPoint.ppm.toFloat()
                     val dataWindow = chartData.takeLast(windowSize)
-                    calculatedSlope = calculateSlope(dataWindow).absoluteValue
+                    val slope = calculateSlope(dataWindow).absoluteValue
+                    val config = it.leakRateConfigState
 
-                    if (calculatedSlope <= it.baselineSlope) {
-                        calculatedLeakRate = calculateLeakRate(yValue)
+                    Log.d("TEST", "Trying to determine Leak Rate Mode")
+                    Log.d("TEST", "Slope: $slope")
+                    Log.d("TEST", "Factored Slope: ${slope * config.slopeFactor}")
+                    Log.d("TEST", "Pumping Stability Rate: ${config.pumpingStabilityRate}")
+                    Log.d("TEST", "ppm: $ppm")
+                    Log.d("TEST", "Leak Rate Test Start: ${config.leakRateTestStart}")
+
+                    if (shouldActivateLeakMode(ppm, slope, config)) {
+                        Log.d("TEST", "Leak Mode")
+                        leakRate = yValue
+
+                        if (baseLeakRate == 0f) {
+                            baseLeakRate = leakRate
+                        }
+
+                        if (leakRate < baseLeakRate) {
+                            baseLeakRate = leakRate
+                        }
+
+                        val colorValue = calculateColorValue(leakRate, baseLeakRate, config)
+                        leakRateColor = Color(colorValue.toInt(), 255 - colorValue.toInt(), 0, 255)
+                    } else {
+                        Log.d("TEST", "Normal Mode")
                     }
                 }
-            }
 
-            it.copy(
-                lastCommand = null,
-                pollingData = pollingData,
-                chartData = chartData,
-                chartMaxQueue = chartMaxQueue,
-                chartMinQueue = chartMinQueue,
-                calculatedSlope = calculatedSlope,
-                calculatedLeakRate = calculatedLeakRate
-            )
+                it.copy(
+                    lastCommand = null,
+                    rawData = rawData,
+                    sgfData = sgfData,
+                    chartData = chartData,
+                    chartMaxQueue = chartMaxQueue,
+                    chartMinQueue = chartMinQueue,
+                    leakRate = leakRate,
+                    baseLeakRate = baseLeakRate,
+                    leakRateColor = leakRateColor
+                )
+            } else {
+                it.copy(rawData = rawData)
+            }
         }
     }
 
-    private fun applyGolayFilter(pollingData: List<DataPoint>): DataPoint {
+    private fun applyGolayFilter(data: List<DataPoint>): DataPoint {
         val coefficients = listOf(0.27473, 0.24176, 0.20879, 0.17582, 0.14286, 0.10989, 0.07692, 0.04396, 0.01099, -0.02198, -0.05495, -0.08791, -0.12088)
-        val recentData = pollingData.takeLast(coefficients.size)
+        val recentData = data.takeLast(coefficients.size)
         var i = 0
         var ppm = BigDecimal(0)
         var mv = BigDecimal(0)
@@ -498,7 +489,7 @@ class BluetoothViewModel @Inject constructor(
             i++
         }
 
-        val lastPoint = pollingData.last()
+        val lastPoint = data.last()
         return DataPoint(ppm, mv, lastPoint.time, lastPoint.date, lastPoint.range, lastPoint.alarmConditions)
     }
 
@@ -512,12 +503,7 @@ class BluetoothViewModel @Inject constructor(
             val index = it.testDataIndex
 
             if (index >= data.size) {
-                it.testDataInterval?.cancel()
-
-                it.copy(
-                    testDataInterval = null,
-                    testDataIndex = 0
-                )
+                it.copy(testDataIndex = 0)
             } else {
                 it.copy(testDataIndex = index + 1)
             }
@@ -553,7 +539,7 @@ class BluetoothViewModel @Inject constructor(
         lineChartController.configure()
         lineChartController.drawData(emptyList())
 
-        val delay = 1000.toLong()
+        val delay = 300.toLong()
         val timer = Timer()
 
         val timerTask = object : TimerTask() {
@@ -581,8 +567,8 @@ class BluetoothViewModel @Inject constructor(
     }
 
     fun loadTestData() {
-        if (_state.value.testDataInterval == null) {
-            val delay = 500.toLong()
+        if (_state.value.pollingInterval == null) {
+            val delay = 300.toLong()
             val timer = Timer()
 
             val timerTask = object : TimerTask() {
@@ -593,7 +579,59 @@ class BluetoothViewModel @Inject constructor(
 
             // Schedule the TimerTask to run periodically
             timer.schedule(timerTask, 0, delay)
-            _state.update { it.copy(testDataInterval = timer) }
+            _state.update { it.copy(pollingInterval = timer) }
+        }
+    }
+
+    fun openLeakRateConfigurationScreen() {
+        _state.update { it.copy(isLeakRateConfigScreen = true )}
+    }
+
+    fun closeLeakRateConfigurationScreen() {
+        _state.update { it.copy(isLeakRateConfigScreen = false )}
+    }
+    fun validateLeakRateConfiguration(
+        leakRateStandardInput: String,
+        pumpingStabilityRateInput: String,
+        minimumCountForLeakRateInput: String,
+        leakRateTestStartInput: String,
+        slopeFactorInput: String,
+        leakRateColorSensitivityInput: String
+    ): LeakRateConfigState? {
+        val leakRateStandard = leakRateStandardInput.toFloatOrNull()
+        val pumpingStabilityRate = pumpingStabilityRateInput.toFloatOrNull()
+        val minimumCountForLeakRate = minimumCountForLeakRateInput.toIntOrNull()
+        val leakRateTestStart = leakRateTestStartInput.toFloatOrNull()
+        val slopeFactor = slopeFactorInput.toFloatOrNull()
+        val leakRateColorSensitivity = leakRateColorSensitivityInput.toFloatOrNull()
+
+        if (
+            leakRateStandard == null
+            || pumpingStabilityRate == null
+            || minimumCountForLeakRate == null
+            || leakRateTestStart == null
+            || slopeFactor == null
+            || leakRateColorSensitivity == null
+        ) {
+            return null
+        }
+
+        return LeakRateConfigState(
+            leakRateStandard,
+            pumpingStabilityRate,
+            minimumCountForLeakRate,
+            leakRateTestStart,
+            slopeFactor,
+            leakRateColorSensitivity
+        )
+    }
+
+    fun setLeakRateConfiguration(config: LeakRateConfigState) {
+        _state.update {
+            it.copy(
+                leakRateConfigState = config,
+                isLeakRateConfigScreen = false
+            )
         }
     }
 }
