@@ -101,10 +101,10 @@ fun ButtonControls(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Button(onClick = if (isPolling) onStopPolling else onStartPolling) {
-                Text(text = if (isPolling) "Stop Polling" else "Start Polling")
+                Text(text = if (isPolling) "結束測試" else "開始測試")
             }
             Button(onClick = onOpenLeakRateConfiguration) {
-                Text(text = "Open Leak Rate Configuration")
+                Text(text = "參數設定")
             }
         }
 
