@@ -376,7 +376,7 @@ class BluetoothViewModel @Inject constructor(
     }
 
     private fun addDataPoint(dataPoint: DataPoint) {
-        _state.update {
+        _state.update { it ->
             val rawData = if (it.rawData.size >= 120) {
                 it.rawData.drop(1) + dataPoint
             } else {
@@ -392,86 +392,147 @@ class BluetoothViewModel @Inject constructor(
                     it.sgfData + filteredDataPoint
                 }
 
-                val xValue: Float = if (it.chartData.isNotEmpty()) {
-                    it.chartData.last().x + 1
-                } else {
-                    1.toFloat()
-                }
+                var step2Data = it.step2Data
 
-                val yValue: Float = calculateLeakRate(dataPoint.ppm.toFloat())
-                val entry = Entry(xValue, yValue)
-                var tempMaxQueue = it.chartMaxQueue
-                var tempMinQueue = it.chartMinQueue
+                if (sgfData.size >= 10) {
+                    val step2Entry = sgfData.takeLast(10)
+                        .map { data -> data.ppm.toFloat() }
+                        .average()
+                        .toFloat()
 
-                val chartData = if (it.chartData.size >= 120) {
-                    val droppedData = it.chartData[0]
-
-                    if (droppedData.y.equals(tempMaxQueue[0].y)) {
-                        tempMaxQueue = tempMaxQueue.drop(1)
-                    }
-
-                    if (droppedData.y.equals(tempMinQueue[0].y)) {
-                        tempMinQueue = tempMinQueue.drop(1)
-                    }
-
-                    it.chartData.drop(1) + entry
-                } else {
-                    it.chartData + entry
-                }
-
-                val chartMaxQueue = manageQueue(entry, tempMaxQueue) { a, b -> a.y > b.y }
-                val chartMinQueue = manageQueue(entry, tempMinQueue) { a, b -> a.y < b.y }
-                val rangeMax: Float = chartMaxQueue[0].y * 1.1f
-                val rangeMin: Float = chartMinQueue[0].y * 0.9f
-
-                lineChartController.setRange(rangeMin, rangeMax)
-                val windowSize = 13
-                var leakRate = 1e-12f
-                var baseLeakRate: Float = it.baseLeakRate
-                var leakRateColor = Color.Transparent
-
-                if (chartData.size >= windowSize) {
-                    val ppm = dataPoint.ppm.toFloat()
-                    val dataWindow = chartData.takeLast(windowSize)
-                    val slope = calculateSlope(dataWindow).absoluteValue
-                    val config = it.leakRateConfigState
-
-                    Log.d("TEST", "Trying to determine Leak Rate Mode")
-                    Log.d("TEST", "Slope: $slope")
-                    Log.d("TEST", "Factored Slope: ${slope * config.slopeFactor}")
-                    Log.d("TEST", "Pumping Stability Rate: ${config.pumpingStabilityRate}")
-                    Log.d("TEST", "ppm: $ppm")
-                    Log.d("TEST", "Leak Rate Test Start: ${config.leakRateTestStart}")
-
-                    if (shouldActivateLeakMode(ppm, slope, config)) {
-                        Log.d("TEST", "Leak Mode")
-                        leakRate = yValue
-
-                        if (baseLeakRate == 0f) {
-                            baseLeakRate = leakRate
-                        }
-
-                        if (leakRate < baseLeakRate) {
-                            baseLeakRate = leakRate
-                        }
-
-                        val colorValue = calculateColorValue(leakRate, baseLeakRate, config)
-                        leakRateColor = Color(colorValue.toInt(), 255 - colorValue.toInt(), 0, 255)
+                    step2Data = if (step2Data.size >= 120) {
+                        step2Data.drop(1) + step2Entry
                     } else {
-                        Log.d("TEST", "Normal Mode")
+                        step2Data + step2Entry
                     }
+                }
+
+                var step3Data = it.step3Data
+
+                if (step2Data.size >= 2) {
+                    val step3Entry = step2Data[step2Data.size - 2] - step2Data.last()
+
+                    step3Data = if (step3Data.size >= 120) {
+                        step3Data.drop(1) + step3Entry
+                    } else {
+                        step3Data + step3Entry
+                    }
+                }
+
+                var step4Data = it.step4Data
+
+                if (step3Data.size >= 10) {
+                    val step4Entry = step3Data.takeLast(10)
+                        .average()
+                        .toFloat()
+
+                    step4Data = if (step4Data.size >= 120) {
+                        step4Data.drop(1) + step4Entry
+                    } else {
+                        step4Data + step4Entry
+                    }
+                }
+
+                var step5Data = it.step5Data
+
+                if (step4Data.isNotEmpty()) {
+                    val step4Entry = step4Data.last()
+
+                    val step5Option = if (step5Data.isNotEmpty()) {
+                        step5Data.last()
+                    } else {
+                        0f
+                    }
+
+                    val step5Entry = if (step4Entry > 0) {
+                        step4Entry
+                    } else {
+                        step5Option
+                    }
+
+                    step5Data = if (step5Data.size >= 120) {
+                        step5Data.drop(1) + step5Entry
+                    } else {
+                        step5Data + step5Entry
+                    }
+                }
+
+                var step6Data = it.step6Data
+
+                if (step5Data.isNotEmpty()) {
+                    val step5Entry = step5Data.last()
+
+                    val step6Entry = if (step6Data.isNotEmpty()) {
+                        val step6Option = step6Data.last()
+
+                        if (step5Entry < step6Option) {
+                            step5Entry
+                        } else {
+                            step6Option
+                        }
+                    } else {
+                        step5Entry
+                    }
+
+                    step6Data = if (step6Data.size >= 120) {
+                        step6Data.drop(1) + step6Entry
+                    } else {
+                        step6Data + step6Entry
+                    }
+                }
+
+                var chartData = it.chartData
+                var chartMaxQueue = it.chartMaxQueue
+                var chartMinQueue = it.chartMinQueue
+
+                if (step6Data.isNotEmpty()) {
+                    val chartEntryY = step5Data.last() - step6Data.last()
+
+                    val chartEntryX: Float = if (it.chartData.isNotEmpty()) {
+                        it.chartData.last().x + 1f
+                    } else {
+                        1f
+                    }
+
+                    val chartEntry = Entry(chartEntryX, chartEntryY)
+
+                    chartData = if (it.chartData.size >= 120) {
+                        val droppedData = it.chartData[0]
+
+                        if (droppedData.y.equals(chartMaxQueue[0].y)) {
+                            chartMaxQueue = chartMaxQueue.drop(1)
+                        }
+
+                        if (droppedData.y.equals(chartMinQueue[0].y)) {
+                            chartMinQueue = chartMinQueue.drop(1)
+                        }
+
+                        it.chartData.drop(1) + chartEntry
+                    } else {
+                        it.chartData + chartEntry
+                    }
+
+                    chartMaxQueue = manageQueue(chartEntry, it.chartMaxQueue) { a, b -> a.y > b.y }
+                    chartMinQueue = manageQueue(chartEntry, it.chartMinQueue) { a, b -> a.y < b.y }
+
+                    val rangeMax: Float = chartMaxQueue[0].y * 1.1f
+                    val rangeMin: Float = chartMinQueue[0].y * 0.9f
+
+                    lineChartController.setRange(rangeMin, rangeMax)
                 }
 
                 it.copy(
                     lastCommand = null,
                     rawData = rawData,
                     sgfData = sgfData,
+                    step2Data = step2Data,
+                    step3Data = step3Data,
+                    step4Data = step4Data,
+                    step5Data = step5Data,
+                    step6Data = step6Data,
                     chartData = chartData,
                     chartMaxQueue = chartMaxQueue,
-                    chartMinQueue = chartMinQueue,
-                    leakRate = leakRate,
-                    baseLeakRate = baseLeakRate,
-                    leakRateColor = leakRateColor
+                    chartMinQueue = chartMinQueue
                 )
             } else {
                 it.copy(rawData = rawData)
