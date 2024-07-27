@@ -285,7 +285,7 @@ class BluetoothViewModel @Inject constructor(
 
     fun startPolling() {
         if (_state.value.pollingInterval == null) {
-            val delay = 300.toLong()
+            val delay = 100.toLong()
             val timer = Timer()
 
             val timerTask = object : TimerTask() {
@@ -634,7 +634,7 @@ class BluetoothViewModel @Inject constructor(
 
     fun loadTestData() {
         if (_state.value.pollingInterval == null) {
-            val delay = 300.toLong()
+            val delay = 100.toLong()
             val timer = Timer()
 
             val timerTask = object : TimerTask() {

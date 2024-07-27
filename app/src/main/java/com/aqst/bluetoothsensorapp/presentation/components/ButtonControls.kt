@@ -93,7 +93,7 @@ fun ButtonControls(
             verticalAlignment = Alignment.CenterVertically
         ) {
             DisconnectButton(onDisconnect = onDisconnect)
-            LeakRateLabel(leakRate = leakRate, leakRateColor = leakRateColor)
+//            LeakRateLabel(leakRate = leakRate, leakRateColor = leakRateColor)
         }
         Row(
             modifier = Modifier.weight(0.5f),
@@ -103,9 +103,9 @@ fun ButtonControls(
             Button(onClick = if (isPolling) onStopPolling else onStartPolling) {
                 Text(text = if (isPolling) "結束測試" else "開始測試")
             }
-            Button(onClick = onOpenLeakRateConfiguration) {
-                Text(text = "參數設定")
-            }
+//            Button(onClick = onOpenLeakRateConfiguration) {
+//                Text(text = "參數設定")
+//            }
         }
 
     }
