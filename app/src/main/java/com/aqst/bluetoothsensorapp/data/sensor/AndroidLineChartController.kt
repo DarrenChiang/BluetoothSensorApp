@@ -22,7 +22,13 @@ class AndroidLineChartController(
     override fun configure() {
         // Customize X-axis
         val xAxis = chart.xAxis
-        xAxis?.position = XAxis.XAxisPosition.BOTTOM
+        xAxis.position = XAxis.XAxisPosition.BOTTOM
+
+        xAxis.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                return value.toString()
+            }
+        }
 
         // Customize Y-axis
         val yAxis = chart.axisLeft

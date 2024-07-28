@@ -25,11 +25,9 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
 import java.util.Timer
 import java.util.TimerTask
 import javax.inject.Inject
-import kotlin.math.absoluteValue
 import kotlin.math.log10
 import kotlin.math.pow
 
@@ -214,9 +212,9 @@ class BluetoothViewModel @Inject constructor(
 
             if (data.size < 6) return
 
-            val readingPPM = BigDecimal(data[0])
-            val readingMV = BigDecimal(data[1])
-            val time: String = data[4]
+            val readingPPM = data[0].toFloat()
+            val readingMV = data[1].toFloat()
+            val time = data[4].toFloat()
             val date: String = data[5]
             val defaultFunc = { _: Int -> "" }
             val range: String = data.getOrElse(6, defaultFunc)
@@ -376,7 +374,7 @@ class BluetoothViewModel @Inject constructor(
     }
 
     private fun addDataPoint(dataPoint: DataPoint) {
-        _state.update { it ->
+        _state.update {
             val rawData = if (it.rawData.size >= 120) {
                 it.rawData.drop(1) + dataPoint
             } else {
@@ -395,10 +393,13 @@ class BluetoothViewModel @Inject constructor(
                 var step2Data = it.step2Data
 
                 if (sgfData.size >= 10) {
-                    val step2Entry = sgfData.takeLast(10)
-                        .map { data -> data.ppm.toFloat() }
+                    val step2Y = sgfData.takeLast(10)
+                        .map { data -> data.ppm }
                         .average()
                         .toFloat()
+
+                    val step2X = sgfData.last().time
+                    val step2Entry = Entry(step2X, step2Y)
 
                     step2Data = if (step2Data.size >= 120) {
                         step2Data.drop(1) + step2Entry
@@ -410,7 +411,9 @@ class BluetoothViewModel @Inject constructor(
                 var step3Data = it.step3Data
 
                 if (step2Data.size >= 2) {
-                    val step3Entry = step2Data[step2Data.size - 2] - step2Data.last()
+                    val step3Y = step2Data[step2Data.size - 2].y - step2Data.last().y
+                    val step3X = step2Data.last().x
+                    val step3Entry = Entry(step3X, step3Y)
 
                     step3Data = if (step3Data.size >= 120) {
                         step3Data.drop(1) + step3Entry
@@ -422,9 +425,13 @@ class BluetoothViewModel @Inject constructor(
                 var step4Data = it.step4Data
 
                 if (step3Data.size >= 10) {
-                    val step4Entry = step3Data.takeLast(10)
+                    val step4Y = step3Data.takeLast(10)
+                        .map { data -> data.y }
                         .average()
                         .toFloat()
+
+                    val step4X = step3Data.last().x
+                    val step4Entry = Entry(step4X, step4Y)
 
                     step4Data = if (step4Data.size >= 120) {
                         step4Data.drop(1) + step4Entry
@@ -437,18 +444,16 @@ class BluetoothViewModel @Inject constructor(
 
                 if (step4Data.isNotEmpty()) {
                     val step4Entry = step4Data.last()
+                    val step4Value = step4Entry.y
+                    val time = step4Entry.x
 
-                    val step5Option = if (step5Data.isNotEmpty()) {
-                        step5Data.last()
+                    val step5Value = if (step5Data.isNotEmpty()) {
+                        step5Data.last().y
                     } else {
                         0f
                     }
 
-                    val step5Entry = if (step4Entry > 0) {
-                        step4Entry
-                    } else {
-                        step5Option
-                    }
+                    val step5Entry = Entry(time, if (step4Value > 0) step4Value else step5Value)
 
                     step5Data = if (step5Data.size >= 120) {
                         step5Data.drop(1) + step5Entry
@@ -461,18 +466,16 @@ class BluetoothViewModel @Inject constructor(
 
                 if (step5Data.isNotEmpty()) {
                     val step5Entry = step5Data.last()
+                    val step5Value = step5Entry.y
+                    val time = step5Entry.x
 
-                    val step6Entry = if (step6Data.isNotEmpty()) {
-                        val step6Option = step6Data.last()
-
-                        if (step5Entry < step6Option) {
-                            step5Entry
-                        } else {
-                            step6Option
-                        }
+                    val step6Value = if (step6Data.isNotEmpty()) {
+                        step6Data.last().y
                     } else {
-                        step5Entry
+                        step5Value
                     }
+
+                    val step6Entry = Entry(time, minOf(step5Value, step6Value))
 
                     step6Data = if (step6Data.size >= 120) {
                         step6Data.drop(1) + step6Entry
@@ -486,15 +489,12 @@ class BluetoothViewModel @Inject constructor(
                 var chartMinQueue = it.chartMinQueue
 
                 if (step6Data.isNotEmpty()) {
-                    val chartEntryY = step5Data.last() - step6Data.last()
+                    val chartValue = step5Data.last().y - step6Data.last().y
+                    val time = step6Data.last().x
 
-                    val chartEntryX: Float = if (it.chartData.isNotEmpty()) {
-                        it.chartData.last().x + 1f
-                    } else {
-                        1f
-                    }
+                    val chartEntry = Entry(time, chartValue)
 
-                    val chartEntry = Entry(chartEntryX, chartEntryY)
+                    Log.i("Test", chartEntry.toString())
 
                     chartData = if (it.chartData.size >= 120) {
                         val droppedData = it.chartData[0]
@@ -541,15 +541,15 @@ class BluetoothViewModel @Inject constructor(
     }
 
     private fun applyGolayFilter(data: List<DataPoint>): DataPoint {
-        val coefficients = listOf(0.27473, 0.24176, 0.20879, 0.17582, 0.14286, 0.10989, 0.07692, 0.04396, 0.01099, -0.02198, -0.05495, -0.08791, -0.12088)
+        val coefficients = listOf(0.27473f, 0.24176f, 0.20879f, 0.17582f, 0.14286f, 0.10989f, 0.07692f, 0.04396f, 0.01099f, -0.02198f, -0.05495f, -0.08791f, -0.12088f)
         val recentData = data.takeLast(coefficients.size)
         var i = 0
-        var ppm = BigDecimal(0)
-        var mv = BigDecimal(0)
+        var ppm = 0f
+        var mv = 0f
 
         while (i < recentData.size) {
             val dataPoint = recentData[recentData.size - 1 - i]
-            val coefficient = BigDecimal(coefficients[i])
+            val coefficient = coefficients[i]
             ppm += coefficient * dataPoint.ppm
             mv += coefficient * dataPoint.mv
             i++
@@ -585,20 +585,17 @@ class BluetoothViewModel @Inject constructor(
     }
 
     fun loadTestDevice() {
-        val content = fileReader.readFile("TestData.txt")
+        val content = fileReader.readFile("LeakDV2.txt")
         val lines = content.split("\n")
-        val headerCondition: (String) -> Boolean = { it.contains("Time(Seconds)") }
         val dataPoints = mutableListOf<DataPoint>()
-        var index = lines.indexOfFirst(headerCondition) + 1
+        var index = 0
 
         while (index < lines.size - 1) {
             val line = lines[index]
-            val fields = line.split(",").map { getTestField(it) }
-            val mv = BigDecimal(fields[1])
-            val ppm = BigDecimal(fields[2])
-            val time = fields[5]
-            val date = fields[6]
-            dataPoints.add(DataPoint(ppm, mv, time, date, "", ""))
+            val fields = line.split(",")
+            val time = fields[0].toFloat()
+            val ppm = fields[1].toFloat()
+            dataPoints.add(DataPoint(ppm, 0f, time, "", "", ""))
             index++
         }
 

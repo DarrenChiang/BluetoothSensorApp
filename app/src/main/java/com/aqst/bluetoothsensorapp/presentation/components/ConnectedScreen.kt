@@ -50,7 +50,8 @@ fun ConnectedScreen(
                     .fillMaxWidth()
             )
             ChartDisplay(
-                label = "Leak Rate",
+                yLabel = "O2 Leak Rate",
+                xLabel = "Time (Seconds)",
                 chart = state.chart,
                 modifier = Modifier
                     .weight(0.8f)

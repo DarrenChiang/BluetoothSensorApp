@@ -24,11 +24,11 @@ data class BluetoothUiState(
 
     val rawData: List<DataPoint> = emptyList(),
     val sgfData: List<DataPoint> = emptyList(),
-    val step2Data: List<Float> = emptyList(),
-    val step3Data: List<Float> = emptyList(),
-    val step4Data: List<Float> = emptyList(),
-    val step5Data: List<Float> = emptyList(),
-    val step6Data: List<Float> = emptyList(),
+    val step2Data: List<Entry> = emptyList(),
+    val step3Data: List<Entry> = emptyList(),
+    val step4Data: List<Entry> = emptyList(),
+    val step5Data: List<Entry> = emptyList(),
+    val step6Data: List<Entry> = emptyList(),
     val chartData: List<Entry> = emptyList(),
 
     val chart: LineChart? = null,

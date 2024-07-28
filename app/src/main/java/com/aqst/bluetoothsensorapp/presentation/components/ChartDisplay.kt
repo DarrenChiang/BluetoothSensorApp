@@ -1,13 +1,16 @@
 package com.aqst.bluetoothsensorapp.presentation.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.github.mikephil.charting.charts.LineChart
 
@@ -30,21 +33,34 @@ fun Modifier.rotateVertically(clockwise: Boolean = true): Modifier {
 @Composable
 fun ChartDisplay(
     modifier: Modifier = Modifier,
-    label: String = "",
+    yLabel: String = "",
+    xLabel: String = "",
     chart: LineChart?
 ) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
     ) {
-        Text(
-            text = label,
-            modifier = Modifier.rotateVertically(clockwise = false)
-        )
-        if (chart != null) {
-            AndroidView(
-                factory = { chart },
-                modifier = Modifier.fillMaxSize()
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(0.9f)
+        ) {
+            Text(
+                text = yLabel,
+                fontSize = 12.sp,
+                modifier = Modifier.rotateVertically(clockwise = false)
+            )
+            if (chart != null) {
+                AndroidView(
+                    factory = { chart },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+        Row(modifier = Modifier.weight(0.1f)) {
+            Text(
+                text = xLabel,
+                fontSize = 12.sp
             )
         }
     }
