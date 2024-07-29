@@ -65,6 +65,6 @@ dependencies {
 
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
 
-    implementation 'org.apache.poi:poi:5.2.2' // for reading and writing Excel files
-    implementation 'org.apache.poi:poi-ooxml:5.2.2' // for OOXML (XLSX) support
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.core:core-ktx:1.9.0'
 }

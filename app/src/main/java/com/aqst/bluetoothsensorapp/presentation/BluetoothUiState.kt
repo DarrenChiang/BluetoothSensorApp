@@ -17,6 +17,7 @@ data class BluetoothUiState(
     val deviceName: String? = null,
     val errorMessage: String? = null,
     val lastCommand: String? = null,
+    val startTime: Long? = null,
 
 //    To be implemented in BluetoothViewModel.kt
 //    Raw Data -> SG Filter -> 10 Average -> 2 Delta -> 10 Average -> Take positive else previous -> Take lesser else previous -> Step 5 - Step 6
@@ -45,5 +46,7 @@ data class BluetoothUiState(
     val leakRateConfigState: LeakRateConfigState = LeakRateConfigState(),
     val leakRate: Float = 1e-12f,
     val baseLeakRate: Float = 0f,
-    val leakRateColor: Color = Color.Transparent
+    val leakRateColor: Color = Color.Transparent,
+
+    val chartWindowSize: Int = 300
 )

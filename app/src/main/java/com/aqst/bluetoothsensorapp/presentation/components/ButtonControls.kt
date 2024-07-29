@@ -103,9 +103,9 @@ fun ButtonControls(
             Button(onClick = if (isPolling) onStopPolling else onStartPolling) {
                 Text(text = if (isPolling) "結束測試" else "開始測試")
             }
-//            Button(onClick = onOpenLeakRateConfiguration) {
-//                Text(text = "參數設定")
-//            }
+            Button(onClick = onOpenLeakRateConfiguration) {
+                Text(text = "參數設定")
+            }
         }
 
     }

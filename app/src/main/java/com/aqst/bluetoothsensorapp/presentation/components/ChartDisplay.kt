@@ -1,9 +1,10 @@
 package com.aqst.bluetoothsensorapp.presentation.components
 
+import android.graphics.Color
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,6 +38,8 @@ fun ChartDisplay(
     xLabel: String = "",
     chart: LineChart?
 ) {
+    val isNightMode = isSystemInDarkTheme()
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
@@ -52,7 +55,19 @@ fun ChartDisplay(
             )
             if (chart != null) {
                 AndroidView(
-                    factory = { chart },
+                    factory = {
+                        chart.apply {
+                            // Set axis text colors based on the current theme
+                            val textColor = if (isNightMode) {
+                                Color.WHITE
+                            } else {
+                                Color.BLACK
+                            }
+
+                            axisLeft.textColor = textColor
+                            xAxis.textColor = textColor
+                        }
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
             }

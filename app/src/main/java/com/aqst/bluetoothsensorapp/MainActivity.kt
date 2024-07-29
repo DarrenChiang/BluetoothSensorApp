@@ -121,7 +121,8 @@ class MainActivity: ComponentActivity() {
                                 onValidateLeakRateConfiguration = viewModel::validateLeakRateConfiguration,
                                 onOpenLeakRateConfiguration = viewModel::openLeakRateConfigurationScreen,
                                 onCancelLeakRateConfiguration = viewModel::closeLeakRateConfigurationScreen,
-                                onSaveLeakRateConfiguration = viewModel::setLeakRateConfiguration
+                                onSaveLeakRateConfiguration = viewModel::setLeakRateConfiguration,
+                                onSetChartWindowSize = viewModel::setChartWindowSize
                             )
                         }
                         else -> {

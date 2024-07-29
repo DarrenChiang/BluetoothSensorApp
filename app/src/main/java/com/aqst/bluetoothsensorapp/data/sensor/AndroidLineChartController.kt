@@ -18,6 +18,7 @@ class AndroidLineChartController(
 
     private var _data: List<Entry> = emptyList()
     private var _limit: Float? = null
+    private var _windowSize: Int = 600
 
     override fun configure() {
         // Customize X-axis
@@ -62,14 +63,13 @@ class AndroidLineChartController(
     }
 
     private fun draw() {
-        val lineDataSet = LineDataSet(_data, "Sensor Data")
+        val lineDataSet = LineDataSet(_data.takeLast(_windowSize), "Sensor Data")
         lineDataSet.color = Color.BLUE
         lineDataSet.valueTextColor = 2
         lineDataSet.mode = LineDataSet.Mode.LINEAR
         lineDataSet.setDrawValues(true)
         lineDataSet.lineWidth = 2.0f
         val lineData = LineData(lineDataSet)
-
 
         if (_limit !== null && _data.size > 1) {
             val entries = mutableListOf<Entry>()
@@ -100,6 +100,11 @@ class AndroidLineChartController(
             null
         }
 
+        draw()
+    }
+
+    override fun setWindowSize(size: Int) {
+        _windowSize = size
         draw()
     }
 }

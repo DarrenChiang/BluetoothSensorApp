@@ -20,7 +20,8 @@ fun ConnectedScreen(
     onValidateLeakRateConfiguration: (String, String, String, String, String, String) -> LeakRateConfigState?,
     onOpenLeakRateConfiguration: () -> Unit,
     onCancelLeakRateConfiguration: () -> Unit,
-    onSaveLeakRateConfiguration: (LeakRateConfigState) -> Unit
+    onSaveLeakRateConfiguration: (LeakRateConfigState) -> Unit,
+    onSetChartWindowSize: (Int) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -29,10 +30,16 @@ fun ConnectedScreen(
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         if (state.isLeakRateConfigScreen) {
-            LeakRateConfigScreen(
-                config = state.leakRateConfigState,
-                onValidateConfig = onValidateLeakRateConfiguration,
-                onSave = onSaveLeakRateConfiguration,
+//            LeakRateConfigScreen(
+//                config = state.leakRateConfigState,
+//                onValidateConfig = onValidateLeakRateConfiguration,
+//                onSave = onSaveLeakRateConfiguration,
+//                onCancel = onCancelLeakRateConfiguration,
+//                modifier = Modifier.fillMaxSize()
+//            )
+            ChartConfigScreen(
+                chartWindowSize = state.chartWindowSize,
+                onSetChartWindowSize = onSetChartWindowSize,
                 onCancel = onCancelLeakRateConfiguration,
                 modifier = Modifier.fillMaxSize()
             )
@@ -50,7 +57,7 @@ fun ConnectedScreen(
                     .fillMaxWidth()
             )
             ChartDisplay(
-                yLabel = "O2 Leak Rate",
+                yLabel = "H2 Leak Rate",
                 xLabel = "Time (Seconds)",
                 chart = state.chart,
                 modifier = Modifier

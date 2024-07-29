@@ -118,6 +118,7 @@ class BluetoothViewModel @Inject constructor(
                 isConnecting = false,
                 drawInterval = null,
                 pollingInterval = null,
+                startTime = null,
                 rawData = emptyList(),
                 sgfData = emptyList(),
                 step2Data = emptyList(),
@@ -214,7 +215,17 @@ class BluetoothViewModel @Inject constructor(
 
             val readingPPM = data[0].toFloat()
             val readingMV = data[1].toFloat()
-            val time = data[4].toFloat()
+
+            var time = data[4].toFloatOrNull()
+
+            if (time == null) {
+                val timeArr = data[4].split(':')
+                val h = timeArr[0].toFloat()
+                val m = timeArr[1].toFloat()
+                val s = timeArr[2].toFloat()
+                time = h * 3600f + m * 60f + s
+            }
+
             val date: String = data[5]
             val defaultFunc = { _: Int -> "" }
             val range: String = data.getOrElse(6, defaultFunc)
@@ -283,7 +294,7 @@ class BluetoothViewModel @Inject constructor(
 
     fun startPolling() {
         if (_state.value.pollingInterval == null) {
-            val delay = 100.toLong()
+            val delay = 300.toLong()
             val timer = Timer()
 
             val timerTask = object : TimerTask() {
@@ -373,9 +384,11 @@ class BluetoothViewModel @Inject constructor(
         return colorValue
     }
 
-    private fun addDataPoint(dataPoint: DataPoint) {
+    private fun addDataPoint(dataPoint: DataPoint, useSystemTime: Boolean = true) {
         _state.update {
-            val rawData = if (it.rawData.size >= 120) {
+            val startTime = it.startTime ?: System.currentTimeMillis()
+
+            val rawData = if (it.rawData.size >= 600) {
                 it.rawData.drop(1) + dataPoint
             } else {
                 it.rawData + dataPoint
@@ -384,7 +397,7 @@ class BluetoothViewModel @Inject constructor(
             if (rawData.size >= 13) {
                 val filteredDataPoint = applyGolayFilter(rawData)
 
-                val sgfData = if (it.sgfData.size >= 120) {
+                val sgfData = if (it.sgfData.size >= 600) {
                     it.sgfData.drop(1) + filteredDataPoint
                 } else {
                     it.sgfData + filteredDataPoint
@@ -401,7 +414,7 @@ class BluetoothViewModel @Inject constructor(
                     val step2X = sgfData.last().time
                     val step2Entry = Entry(step2X, step2Y)
 
-                    step2Data = if (step2Data.size >= 120) {
+                    step2Data = if (step2Data.size >= 600) {
                         step2Data.drop(1) + step2Entry
                     } else {
                         step2Data + step2Entry
@@ -415,7 +428,7 @@ class BluetoothViewModel @Inject constructor(
                     val step3X = step2Data.last().x
                     val step3Entry = Entry(step3X, step3Y)
 
-                    step3Data = if (step3Data.size >= 120) {
+                    step3Data = if (step3Data.size >= 600) {
                         step3Data.drop(1) + step3Entry
                     } else {
                         step3Data + step3Entry
@@ -433,7 +446,7 @@ class BluetoothViewModel @Inject constructor(
                     val step4X = step3Data.last().x
                     val step4Entry = Entry(step4X, step4Y)
 
-                    step4Data = if (step4Data.size >= 120) {
+                    step4Data = if (step4Data.size >= 600) {
                         step4Data.drop(1) + step4Entry
                     } else {
                         step4Data + step4Entry
@@ -455,7 +468,7 @@ class BluetoothViewModel @Inject constructor(
 
                     val step5Entry = Entry(time, if (step4Value > 0) step4Value else step5Value)
 
-                    step5Data = if (step5Data.size >= 120) {
+                    step5Data = if (step5Data.size >= 600) {
                         step5Data.drop(1) + step5Entry
                     } else {
                         step5Data + step5Entry
@@ -477,7 +490,7 @@ class BluetoothViewModel @Inject constructor(
 
                     val step6Entry = Entry(time, minOf(step5Value, step6Value))
 
-                    step6Data = if (step6Data.size >= 120) {
+                    step6Data = if (step6Data.size >= 600) {
                         step6Data.drop(1) + step6Entry
                     } else {
                         step6Data + step6Entry
@@ -490,13 +503,17 @@ class BluetoothViewModel @Inject constructor(
 
                 if (step6Data.isNotEmpty()) {
                     val chartValue = step5Data.last().y - step6Data.last().y
-                    val time = step6Data.last().x
+
+                    val time = if (useSystemTime) {
+                        (System.currentTimeMillis() - startTime) / 1000f
+                    } else {
+                        step6Data.last().x
+                    }
 
                     val chartEntry = Entry(time, chartValue)
-
                     Log.i("Test", chartEntry.toString())
 
-                    chartData = if (it.chartData.size >= 120) {
+                    chartData = if (it.chartData.size >= 600) {
                         val droppedData = it.chartData[0]
 
                         if (droppedData.y.equals(chartMaxQueue[0].y)) {
@@ -523,6 +540,7 @@ class BluetoothViewModel @Inject constructor(
 
                 it.copy(
                     lastCommand = null,
+                    startTime = startTime,
                     rawData = rawData,
                     sgfData = sgfData,
                     step2Data = step2Data,
@@ -561,7 +579,7 @@ class BluetoothViewModel @Inject constructor(
 
     fun addTestDataPoint() {
         if (_state.value.testDataIndex < _state.value.testData.size) {
-            addDataPoint(_state.value.testData[_state.value.testDataIndex])
+            addDataPoint(_state.value.testData[_state.value.testDataIndex], false)
         }
 
         _state.update {
@@ -631,7 +649,7 @@ class BluetoothViewModel @Inject constructor(
 
     fun loadTestData() {
         if (_state.value.pollingInterval == null) {
-            val delay = 100.toLong()
+            val delay = 300.toLong()
             val timer = Timer()
 
             val timerTask = object : TimerTask() {
@@ -693,6 +711,17 @@ class BluetoothViewModel @Inject constructor(
         _state.update {
             it.copy(
                 leakRateConfigState = config,
+                isLeakRateConfigScreen = false
+            )
+        }
+    }
+
+    fun setChartWindowSize(size: Int) {
+        lineChartController.setWindowSize(size)
+
+        _state.update {
+            it.copy(
+                chartWindowSize = size,
                 isLeakRateConfigScreen = false
             )
         }

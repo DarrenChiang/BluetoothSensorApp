@@ -212,7 +212,8 @@ fun LeakRateConfigScreen(
                         onSave(finalConfig!!)
                     }
                 },
-                enabled = finalConfig !== null) {
+                enabled = finalConfig !== null
+            ) {
                 Text(text = "Save")
             }
         }

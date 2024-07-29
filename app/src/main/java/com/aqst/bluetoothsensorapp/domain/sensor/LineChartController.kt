@@ -14,4 +14,6 @@ interface LineChartController {
     fun drawData(data: List<Entry>)
 
     fun setLimit(coefficient: Float?, exponent: Int?)
+
+    fun setWindowSize(size: Int)
 }
