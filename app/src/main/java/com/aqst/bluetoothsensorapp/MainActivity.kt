@@ -118,11 +118,9 @@ class MainActivity: ComponentActivity() {
                                 onStartPolling = viewModel::startPolling,
                                 onStopPolling = viewModel::stopPolling,
                                 onLoadTestData = viewModel::loadTestData,
-                                onValidateLeakRateConfiguration = viewModel::validateLeakRateConfiguration,
-                                onOpenLeakRateConfiguration = viewModel::openLeakRateConfigurationScreen,
-                                onCancelLeakRateConfiguration = viewModel::closeLeakRateConfigurationScreen,
-                                onSaveLeakRateConfiguration = viewModel::setLeakRateConfiguration,
-                                onSetChartWindowSize = viewModel::setChartWindowSize
+                                onOpenConfigScreen = viewModel::openConfigScreen,
+                                onCancelConfig = viewModel::closeConfigScreen,
+                                onSaveConfig = viewModel::saveChartConfig
                             )
                         }
                         else -> {

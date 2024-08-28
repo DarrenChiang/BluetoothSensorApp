@@ -1,9 +1,8 @@
 package com.aqst.bluetoothsensorapp.presentation
 
-import androidx.compose.ui.graphics.Color
 import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothDevice
 import com.aqst.bluetoothsensorapp.domain.sensor.DataPoint
-import com.aqst.bluetoothsensorapp.domain.sensor.LeakRateConfigState
+import com.aqst.bluetoothsensorapp.domain.sensor.ChartConfigState
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.data.Entry
 import java.util.Timer
@@ -42,11 +41,6 @@ data class BluetoothUiState(
     val testData: List<DataPoint> = emptyList(),
     val testDataIndex: Int = 0,
 
-    val isLeakRateConfigScreen: Boolean = false,
-    val leakRateConfigState: LeakRateConfigState = LeakRateConfigState(),
-    val leakRate: Float = 1e-12f,
-    val baseLeakRate: Float = 0f,
-    val leakRateColor: Color = Color.Transparent,
-
-    val chartWindowSize: Int = 300
+    val isConfigScreen: Boolean = false,
+    val chartConfigState: ChartConfigState = ChartConfigState()
 )

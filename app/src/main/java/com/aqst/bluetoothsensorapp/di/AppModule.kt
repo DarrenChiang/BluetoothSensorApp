@@ -4,8 +4,10 @@ import android.content.Context
 import com.aqst.bluetoothsensorapp.data.sensor.AndroidBluetoothController
 import com.aqst.bluetoothsensorapp.data.sensor.AndroidLineChartController
 import com.aqst.bluetoothsensorapp.data.sensor.FileReader
+import com.aqst.bluetoothsensorapp.data.sensor.LeakSoundController
 import com.aqst.bluetoothsensorapp.domain.sensor.BluetoothController
 import com.aqst.bluetoothsensorapp.domain.sensor.LineChartController
+import com.aqst.bluetoothsensorapp.domain.sensor.SoundController
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,5 +34,11 @@ object AppModule {
     @Singleton
     fun provideFileReader(@ApplicationContext context: Context): FileReader {
         return FileReader(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSoundController(@ApplicationContext context: Context): SoundController {
+        return LeakSoundController(context)
     }
 }

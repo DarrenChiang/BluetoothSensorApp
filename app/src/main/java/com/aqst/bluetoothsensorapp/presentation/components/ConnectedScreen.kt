@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.aqst.bluetoothsensorapp.domain.sensor.LeakRateConfigState
+import com.aqst.bluetoothsensorapp.domain.sensor.ChartConfigState
 import com.aqst.bluetoothsensorapp.presentation.BluetoothUiState
 @Composable
 fun ConnectedScreen(
@@ -17,11 +17,9 @@ fun ConnectedScreen(
     onStartPolling: () -> Unit,
     onStopPolling: () -> Unit,
     onLoadTestData: () -> Unit,
-    onValidateLeakRateConfiguration: (String, String, String, String, String, String) -> LeakRateConfigState?,
-    onOpenLeakRateConfiguration: () -> Unit,
-    onCancelLeakRateConfiguration: () -> Unit,
-    onSaveLeakRateConfiguration: (LeakRateConfigState) -> Unit,
-    onSetChartWindowSize: (Int) -> Unit,
+    onOpenConfigScreen: () -> Unit,
+    onCancelConfig: () -> Unit,
+    onSaveConfig: (ChartConfigState) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -29,29 +27,20 @@ fun ConnectedScreen(
             .fillMaxSize(),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        if (state.isLeakRateConfigScreen) {
-//            LeakRateConfigScreen(
-//                config = state.leakRateConfigState,
-//                onValidateConfig = onValidateLeakRateConfiguration,
-//                onSave = onSaveLeakRateConfiguration,
-//                onCancel = onCancelLeakRateConfiguration,
-//                modifier = Modifier.fillMaxSize()
-//            )
+        if (state.isConfigScreen) {
             ChartConfigScreen(
-                chartWindowSize = state.chartWindowSize,
-                onSetChartWindowSize = onSetChartWindowSize,
-                onCancel = onCancelLeakRateConfiguration,
+                configState = state.chartConfigState,
+                onSaveAndClose = onSaveConfig,
+                onCancel = onCancelConfig,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
             ButtonControls(
-                leakRate = state.leakRate,
-                leakRateColor = state.leakRateColor,
                 isPolling = state.pollingInterval !== null,
                 onDisconnect = onDisconnect,
                 onStartPolling = if (state.isTestDevice) onLoadTestData else onStartPolling,
                 onStopPolling = onStopPolling,
-                onOpenLeakRateConfiguration = onOpenLeakRateConfiguration,
+                onOpenConfigScreen = onOpenConfigScreen,
                 modifier = Modifier
                     .weight(0.2f)
                     .fillMaxWidth()
